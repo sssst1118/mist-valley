@@ -4,6 +4,7 @@ using XingGame.Core;
 using XingGame.Core.Events;
 using XingGame.Core.Save;
 using XingGame.Core.Time;
+using XingGame.Systems.Interaction;
 
 namespace XingGame.World;
 
@@ -62,6 +63,10 @@ public partial class GameRoot : Node
         services.Register<IWeatherGenerator>(weatherGenerator);
         services.Register<ITimeService>(time);
         services.Register<ISaveService>(saves);
+
+        // 交互系统由本类构造（ADR-007：全游戏只在这里 new 具体实现）。
+        // 桥接层的 Interactable 与 InteractPrompt 都必须拿到同一个实例，否则提示永远找不到目标。
+        services.Register<IInteractionSystem>(new InteractionSystem());
 
         _worldSeed = worldSeed;
         _time = time;

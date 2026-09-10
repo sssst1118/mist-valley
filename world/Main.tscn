@@ -1,7 +1,64 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="PackedScene" path="res://ui/TimeHud.tscn" id="1_timehud"]
+[ext_resource type="PackedScene" path="res://world/Player.tscn" id="2_player"]
+[ext_resource type="Script" path="res://world/Interactable.cs" id="3_interactable"]
+[ext_resource type="PackedScene" path="res://ui/InteractPrompt.tscn" id="4_interactprompt"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_wall_h"]
+size = Vector2(1640, 20)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_wall_v"]
+size = Vector2(20, 1040)
 
 [node name="Main" type="Node"]
 
-[node name="TimeHud" parent="." instance=ExtResource("1_timehud")]
+[node name="Ground" type="Polygon2D" parent="."]
+color = Color(0.22, 0.29, 0.2, 1)
+polygon = PackedVector2Array(-800, -500, 800, -500, 800, 500, -800, 500)
+
+[node name="Walls" type="StaticBody2D" parent="."]
+
+[node name="North" type="CollisionShape2D" parent="Walls"]
+position = Vector2(0, -510)
+shape = SubResource("RectangleShape2D_wall_h")
+
+[node name="South" type="CollisionShape2D" parent="Walls"]
+position = Vector2(0, 510)
+shape = SubResource("RectangleShape2D_wall_h")
+
+[node name="West" type="CollisionShape2D" parent="Walls"]
+position = Vector2(-810, 0)
+shape = SubResource("RectangleShape2D_wall_v")
+
+[node name="East" type="CollisionShape2D" parent="Walls"]
+position = Vector2(810, 0)
+shape = SubResource("RectangleShape2D_wall_v")
+
+[node name="Player" parent="." instance=ExtResource("2_player")]
+
+[node name="SpiritField" type="Node2D" parent="."]
+position = Vector2(-170, 0)
+script = ExtResource("3_interactable")
+Radius = 60.0
+Prompt = "开垦灵田"
+
+[node name="Well" type="Node2D" parent="."]
+position = Vector2(170, 0)
+script = ExtResource("3_interactable")
+Radius = 60.0
+Prompt = "打水"
+
+[node name="SealedVein" type="Node2D" parent="."]
+position = Vector2(0, -190)
+script = ExtResource("3_interactable")
+Radius = 60.0
+CanInteract = false
+Prompt = "开采灵脉"
+
+[node name="Hud" type="CanvasLayer" parent="."]
+
+[node name="TimeHud" parent="Hud" instance=ExtResource("1_timehud")]
+
+[node name="InteractPrompt" parent="Hud" instance=ExtResource("4_interactprompt")]
+PlayerPath = NodePath("../../Player")
