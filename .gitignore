@@ -1,0 +1,38 @@
+# ==== 剧透内容：1.0 发布前不得公开 ====
+docs/spoilers/
+
+# ==== 内部开发文档：不随公开仓库发布 ====
+/CLAUDE.md
+/AGENT-BRIEF.md
+/ARCHITECTURE.md
+/CODE_MAP.md
+/PROGRESS.md
+
+# ==== Godot 4.x ====
+.godot/
+/android/
+*.translation
+
+# ==== C# / .NET ====
+.mono/
+data_*/
+bin/
+obj/
+*.user
+
+# ==== 构建产物与导出 ====
+/build/
+/export/
+*.pck
+*.exe
+*.dll
+*.so
+*.dylib
+
+# ==== 编辑器与系统 ====
+.vscode/*
+!.vscode/settings.json
+.idea/
+*.swp
+.DS_Store
+Thumbs.db

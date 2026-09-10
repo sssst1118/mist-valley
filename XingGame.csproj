@@ -1,0 +1,42 @@
+<Project Sdk="Godot.NET.Sdk/4.6.2">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <RootNamespace>XingGame</RootNamespace>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>disable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="XingGame.Core.csproj" />
+  </ItemGroup>
+
+  <!--
+    纯 C# 边界（ARCHITECTURE.md ADR-002）：core/ 与 systems/ 归 XingGame.Core，
+    本工程只编译桥接层。tests/ 亦然。
+  -->
+  <ItemGroup>
+    <Compile Remove="core/**" />
+    <Compile Remove="systems/**" />
+    <Compile Remove="tests/**" />
+  </ItemGroup>
+
+  <!--
+    ！不要删这几行！
+
+    Godot.NET.Sdk 把本工程的中间目录挪到了 .godot/mono/temp/obj/，于是 SDK 的默认
+    排除规则（排除 $(BaseIntermediateOutputPath)）就不再覆盖【根目录的 obj/】了——
+    而根目录的 obj/ 是 XingGame.Core 的中间目录。结果：XingGame.csproj 的通配符会把
+    XingGame.Core 生成的 AssemblyInfo.cs 当成自己的源码编进来，两个程序集的特性撞车。
+
+    症状很有迷惑性：清理后第一次构建通过，第二次必炸 CS0579，报错还指向 .godot 下的文件。
+  -->
+  <ItemGroup>
+    <Compile Remove="obj/**" />
+    <Compile Remove="bin/**" />
+    <Compile Remove=".godot/**" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,6 @@
+{
+  "spring": { "sunny": 60, "rainy": 25, "storm": 5, "snowy": 0,  "windy": 5, "foggy": 5 },
+  "summer": { "sunny": 70, "rainy": 20, "storm": 8, "snowy": 0,  "windy": 2, "foggy": 0 },
+  "autumn": { "sunny": 55, "rainy": 30, "storm": 5, "snowy": 0,  "windy": 5, "foggy": 5 },
+  "winter": { "sunny": 50, "rainy": 10, "storm": 0, "snowy": 30, "windy": 5, "foggy": 5 }
+}

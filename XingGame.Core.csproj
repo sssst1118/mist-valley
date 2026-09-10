@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>XingGame</RootNamespace>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!--
+    纯 C# 区（ARCHITECTURE.md ADR-002）。
+
+    本工程【不引用 GodotSharp】—— 这是刻意的：core/ 与 systems/ 里只要出现
+    一个 `using Godot;`，这里就编译不过。边界由编译器强制，而不是靠人自觉。
+
+    桥接层目录（world/ entities/ ui/ mods/）与 tests/ 在此排除，
+    它们归 XingGame.csproj 或 tests/XingGame.Tests.csproj。
+  -->
+  <ItemGroup>
+    <Compile Remove="world/**" />
+    <Compile Remove="entities/**" />
+    <Compile Remove="ui/**" />
+    <Compile Remove="mods/**" />
+    <Compile Remove="tests/**" />
+    <Compile Remove=".godot/**" />
+  </ItemGroup>
+
+</Project>

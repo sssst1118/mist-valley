@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XingGame.Core", "XingGame.Core.csproj", "{5199BB28-6D99-42CE-A7A7-E0CB7ECE6B46}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XingGame", "XingGame.csproj", "{2855023B-4812-4B38-897E-3A68E87143E7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "XingGame.Tests", "tests\XingGame.Tests.csproj", "{806CEFEF-D92D-472F-A3A3-C4AC0C9B7635}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{5199BB28-6D99-42CE-A7A7-E0CB7ECE6B46}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5199BB28-6D99-42CE-A7A7-E0CB7ECE6B46}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5199BB28-6D99-42CE-A7A7-E0CB7ECE6B46}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5199BB28-6D99-42CE-A7A7-E0CB7ECE6B46}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2855023B-4812-4B38-897E-3A68E87143E7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2855023B-4812-4B38-897E-3A68E87143E7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2855023B-4812-4B38-897E-3A68E87143E7}.Release|Any CPU.ActiveCfg = Debug|Any CPU
+		{2855023B-4812-4B38-897E-3A68E87143E7}.Release|Any CPU.Build.0 = Debug|Any CPU
+		{806CEFEF-D92D-472F-A3A3-C4AC0C9B7635}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{806CEFEF-D92D-472F-A3A3-C4AC0C9B7635}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{806CEFEF-D92D-472F-A3A3-C4AC0C9B7635}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{806CEFEF-D92D-472F-A3A3-C4AC0C9B7635}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
