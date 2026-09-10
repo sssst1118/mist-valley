@@ -1,12 +1,16 @@
 using System;
+using System.IO;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using XingGame.Core.Events;
+using XingGame.Core.Save;
 
 namespace XingGame.Core.Time;
 
 /// <summary>
 /// 时间系统的实现。只推进游戏分钟、推导时段、按日掷天气并广播事件——不产生任何玩法效果（ADR-006）。
 /// </summary>
-public sealed class TimeService : ITimeService
+public sealed class TimeService : ITimeService, ISaveable
 {
     private const int MinutesPerHour = 60;
     private const int HoursPerDay = 24;
@@ -65,6 +69,70 @@ public sealed class TimeService : ITimeService
         PublishPhaseChanged(previous);
         PublishDayChanged(previous);
     }
+
+    public string SaveKey => "time";
+
+    /// <summary>JSON 形态变了就 +1，并在 <see cref="Deserialize"/> 里按 <c>fromVersion</c> 迁移。</summary>
+    public int Version => 1;
+
+    /// <summary>
+    /// 只存时刻与天气，<b>不存 worldSeed</b>——种子在存档 meta 表里（由 <c>TryPeekWorldSeed</c> 读），
+    /// 同一个事实存两处早晚会对不上（ARCHITECTURE「TimeService 接入存档」）。
+    /// 天气存的是当下实际值而非按种子重掷：存档是权威事实，重掷会抹掉当天真实发生过的天气。
+    /// </summary>
+    public string Serialize() =>
+        JsonSerializer.Serialize(
+            new SavedTime(_now.Year, _now.Season, _now.Day, _now.Hour, _now.Minute, _weather),
+            _saveJsonOptions);
+
+    public void Deserialize(string json, int fromVersion)
+    {
+        // 来自更新版本的存档不能猜着读：读错数据比读不出来更糟（ADR-009 同款理由）
+        if (fromVersion > Version)
+            throw new NotSupportedException($"时间存档版本 {fromVersion} 高于当前支持的 {Version}，无法读取");
+
+        SavedTime saved = JsonSerializer.Deserialize<SavedTime>(json, _saveJsonOptions)
+            ?? throw new InvalidDataException("时间存档内容为空");
+
+        Validate(saved);
+
+        // 载入是整状态覆盖，故不发任何事件：组合根在 _Ready 里调用，订阅者此刻多半还没建好；
+        // 就算建好了，重放跨天事件也会让按 tick 记账的订阅者多算一天（同 Sleep 的理由）。
+        _now = new GameTime(saved.Year, saved.Season, saved.Day, saved.Hour, saved.Minute);
+        _weather = saved.Weather;
+    }
+
+    /// <summary>
+    /// 存档是外部输入，越界值不拦会让 EpochDay/TotalMinutes 算出一个不存在的一天。当场抛比
+    /// 让坏数据渗进天气序列强——后者要到很久以后才显形，且现场离病因太远。
+    /// </summary>
+    private static void Validate(SavedTime saved)
+    {
+        if (saved.Year < 1)
+            throw new InvalidDataException($"时间存档年份 {saved.Year} 越界");
+
+        if (!Enum.IsDefined(saved.Season))
+            throw new InvalidDataException($"时间存档季节值 {(int)saved.Season} 越界");
+
+        if (saved.Day < 1 || saved.Day > GameTime.DaysPerSeason)
+            throw new InvalidDataException($"时间存档日 {saved.Day} 越界（应在 1..{GameTime.DaysPerSeason}）");
+
+        if (saved.Hour < 0 || saved.Hour >= HoursPerDay)
+            throw new InvalidDataException($"时间存档小时 {saved.Hour} 越界");
+
+        if (saved.Minute < 0 || saved.Minute >= MinutesPerHour)
+            throw new InvalidDataException($"时间存档分钟 {saved.Minute} 越界");
+    }
+
+    /// <summary>存档 JSON 的形态。私有：外部只该经 <see cref="Serialize"/>/<see cref="Deserialize"/> 碰它。</summary>
+    private sealed record SavedTime(int Year, Season Season, int Day, int Hour, int Minute, Weather Weather);
+
+    /// <summary>枚举写成名字（"Rainy"）而非数字：Blob 要能被人和 Mod 读懂，将来往枚举里插值也不会错位。</summary>
+    private static readonly JsonSerializerOptions _saveJsonOptions = new()
+    {
+        WriteIndented = true,
+        Converters = { new JsonStringEnumConverter() },
+    };
 
     private void TickOneMinute()
     {

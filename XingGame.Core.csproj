@@ -27,4 +27,13 @@
     <Compile Remove=".godot/**" />
   </ItemGroup>
 
+  <!--
+    唯一的第三方依赖。设计文档 §21.1 定的存储方案就是 SQLite，这里选微软官方的
+    ADO.NET provider（而非 System.Data.SQLite）——它随包带上 SQLitePCLRaw 的原生库，
+    跨平台且与 .NET 8 同步发版。见 ARCHITECTURE.md ADR-008。
+  -->
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.31" />
+  </ItemGroup>
+
 </Project>
