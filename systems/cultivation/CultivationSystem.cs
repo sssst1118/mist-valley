@@ -3,6 +3,7 @@ using System.IO;
 using System.Text.Json;
 using XingGame.Core.Save;
 using XingGame.Core.Time;
+using XingGame.Systems.Buffs;
 
 namespace XingGame.Systems.Cultivation;
 
@@ -36,7 +37,9 @@ namespace XingGame.Systems.Cultivation;
 /// <b>数值一个都不在本类里</b>：基础速度、逐层开销、季节与时辰的倍率全在
 /// <see cref="ICultivationSpeedTable"/>（<c>data/cultivation/cultivation_speed.json</c>），
 /// 灵力上限的系数与两个恢复速率全在 <see cref="ISpiritPowerTable"/>
-/// （<c>data/cultivation/spirit_power.json</c>）。本类只负责「什么时候结算、怎么乘、什么时候升层」。
+/// （<c>data/cultivation/spirit_power.json</c>），丹药等限时增益的倍率与时长全在增益表
+/// （<c>data/buffs/buffs.json</c>，M3-6 起）——本类连「聚气散」这个名字都不认识，只认识
+/// 「此刻修炼速度的总修正是多少」。本类只负责「什么时候结算、怎么乘、什么时候升层」。
 /// </para>
 /// </remarks>
 public sealed class CultivationSystem : ICultivationSystem, ISaveable
@@ -48,6 +51,7 @@ public sealed class CultivationSystem : ICultivationSystem, ISaveable
     private readonly ICultivationSpeedTable _speed;
     private readonly ISpiritPowerTable _spiritPower;
     private readonly ISpiritVeinSource _spiritVein;
+    private readonly ICultivationSpeedBonus _speedBonus;
 
     private SpiritRootGrade _grade = null!;
     private SpiritRootDefinition? _root;
@@ -63,12 +67,18 @@ public sealed class CultivationSystem : ICultivationSystem, ISaveable
     /// 打坐处的灵气浓度（§8.8 的灵脉等级）。**打坐只看这个数**，所以这里收的是窄接口而不是农场的
     /// 那件状态——见 <see cref="ISpiritVeinSource"/>。
     /// </param>
+    /// <param name="speedBonus">
+    /// 限时增益对修炼速度的总修正（§8.3 表里的「丹药」那一行，M3-6 起）。同 <paramref name="spiritVein"/>
+    /// 一样是**窄接口**：打坐只欠这一个数，不欠整个 <see cref="IBuffSystem"/>（查移速、清增益、
+    /// 存档格式都不是修炼领域的事）。
+    /// </param>
     public CultivationSystem(
         ISpiritRootTable roots,
         IRealmTable realms,
         ICultivationSpeedTable speed,
         ISpiritPowerTable spiritPower,
         ISpiritVeinSource spiritVein,
+        ICultivationSpeedBonus speedBonus,
         string gradeId,
         string? rootId,
         string realmId,
@@ -79,6 +89,7 @@ public sealed class CultivationSystem : ICultivationSystem, ISaveable
         _speed = speed ?? throw new ArgumentNullException(nameof(speed));
         _spiritPower = spiritPower ?? throw new ArgumentNullException(nameof(spiritPower));
         _spiritVein = spiritVein ?? throw new ArgumentNullException(nameof(spiritVein));
+        _speedBonus = speedBonus ?? throw new ArgumentNullException(nameof(speedBonus));
 
         (SpiritRootGrade grade, SpiritRootDefinition? root, RealmDefinition realm) =
             Resolve(gradeId, rootId, realmId, "构造参数");
@@ -145,11 +156,12 @@ public sealed class CultivationSystem : ICultivationSystem, ISaveable
     }
 
     /// <summary>
-    /// 此刻打坐有多快：§4.2 的灵根档位 × §8.3 的季节 × §8.3 的时辰 × §8.8 的灵脉（灵气浓度）。
+    /// 此刻打坐有多快：§4.2 的灵根档位 × §8.3 的季节 × §8.3 的时辰 × §8.8 的灵脉（灵气浓度）
+    /// × §8.3 的丹药等限时增益。
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <b>四个因素相乘，不相加</b>：§8.3 把它们列成一张「其他影响因素」表，每一行都是一个独立的
+    /// <b>五个因素相乘，不相加</b>：§8.3 把它们列成一张「其他影响因素」表，每一行都是一个独立的
     /// 加成，同时成立时是几个乘数连乘——春季的 +10% 撞上子时的 +30% 是 ×1.43，不是 ×1.40。
     /// 相加会随因素增多越来越偏离文档，而偏差只在两个加成同时出现时才显形。
     /// </para>
@@ -160,7 +172,14 @@ public sealed class CultivationSystem : ICultivationSystem, ISaveable
     /// （比如 0-100 的浓度值），那会让「灵脉 +10%」在代码里有两个含义。
     /// </para>
     /// <para>
-    /// <b>再加因素（聚灵阵、风水、功法品阶、丹药、心境、双修）也就在这一行再乘一项</b>：
+    /// <b>第五个因素（M3-6 起：丹药等限时增益）就是 §8.3 表里的「丹药」那一行</b>：聚气散
+    /// 「+50% 持续 7 天」，所以这里乘的是 <see cref="ICultivationSpeedBonus.MultiplierAt"/>——
+    /// 一条增益都没有时它是 1.0，不是「这一项不存在」。**数值全在
+    /// <c>data/buffs/buffs.json</c> 上**，修炼速度表与这个类里一个数都不许有它（见
+    /// <c>M3Audit_Cultivation</c> 的两条钉子）。
+    /// </para>
+    /// <para>
+    /// <b>再加因素（聚灵阵、风水、功法品阶、心境、双修）也就在这一行再乘一项</b>：
     /// 合成只此一处，打坐的时间账与升层判定都不用改。
     /// </para>
     /// </remarks>
@@ -173,7 +192,8 @@ public sealed class CultivationSystem : ICultivationSystem, ISaveable
         _grade.CultivationSpeedMultiplier       // §4.2 六档灵根：0.3x .. 4.0x
         * _speed.SeasonMultiplier(now.Season)   // §8.3 季节：春 1.10 / 夏 1.05 / 秋 1.10 / 冬 0.90
         * _speed.HourMultiplier(now.Hour)       // §8.3 时辰：子时 1.30 / 午时 1.20 / 其余 1.00
-        * _spiritVein.DensityMultiplier;        // §8.8 灵气浓度：微型 1.10 … 龙脉 6.00
+        * _spiritVein.DensityMultiplier         // §8.8 灵气浓度：微型 1.10 … 龙脉 6.00
+        * _speedBonus.MultiplierAt(now);        // §8.3 丹药等限时增益：聚气散 1.50 …（没有就是 1.00）
 
     /// <summary>
     /// 打坐 <paramref name="minutes"/> 游戏分钟，按 <paramref name="now"/> 这一刻的倍率结算修为，

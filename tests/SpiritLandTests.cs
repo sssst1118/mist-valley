@@ -72,7 +72,7 @@ public sealed class SpiritLandTests : IDisposable
 
     /// <summary>同一个玩家（双灵根 1.0x、炼气一层），打坐的地方换一个灵脉等级。</summary>
     private static CultivationSystem CultivationAt(string veinId) =>
-        new(Roots, Realms, Speed, SpiritPower, Farm(veinId),
+        new(Roots, Realms, Speed, SpiritPower, Farm(veinId), new NoSpeedBonus(),
             "grade_true_dual", rootId: null, "qi_refining", stage: 1);
 
     // ── 起点与浓度 ──────────────────────────────────────────────────
@@ -170,7 +170,7 @@ public sealed class SpiritLandTests : IDisposable
 
         Assert.Equal(2.0, farm.DensityMultiplier, precision: 10);
 
-        var system = new CultivationSystem(Roots, Realms, Speed, SpiritPower, farm,
+        var system = new CultivationSystem(Roots, Realms, Speed, SpiritPower, farm, new NoSpeedBonus(),
             "grade_true_dual", rootId: null, "qi_refining", 1);
 
         Assert.Equal(22, system.Meditate(Morning(), 60));

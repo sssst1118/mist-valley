@@ -68,7 +68,7 @@ public class LifeSpellTests
     private static CultivationSystem Cultivation(int stage) =>
         // 灵脉喂替身（×1.0）：本文件量的是法术的解锁、消耗与落在哪几格，与打坐多快无关
         // （见 NoSpiritVein 的注释）
-        new(Roots, Realms, Speed, SpiritPower, new NoSpiritVein(),
+        new(Roots, Realms, Speed, SpiritPower, new NoSpiritVein(), new NoSpeedBonus(),
             "grade_false", rootId: null, "qi_refining", stage);
 
     private LifeSpellSystem NewSystem(CultivationSystem cultivation) =>

@@ -6,7 +6,8 @@ using XingGame.Systems.Cultivation;
 namespace XingGame.Tests;
 
 /// <summary>
-/// 修仙骨架（M3-1）与打坐（M3-2）的对抗性审计：**刻意不做**的那些事，用反射钉住。
+/// 修仙骨架（M3-1）、打坐（M3-2）、灵力池（M3-3）、法术（M3-4）、灵脉（M3-5）与增益（M3-6）
+/// 的对抗性审计：**刻意不做**的那些事，用反射钉住。
 /// </summary>
 /// <remarks>
 /// <para>
@@ -29,22 +30,24 @@ public class M3Audit_Cultivation
     private static readonly string[] EffectTokens = { "Damage", "Freeze", "Teleport", "Invisible", "Bonus" };
 
     /// <summary>
-    /// §8.3 的表里**还没接上**的那六个因素（聚灵阵 / 风水 / 功法品阶 / 丹药 / 心境 / 双修）
+    /// §8.3 的表里**还没接上**的那五个因素（聚灵阵 / 风水 / 功法品阶 / 心境 / 双修）
     /// 一个字段都不许有。它们的系统都还不存在，见下面的用例。
     /// </summary>
     /// <remarks>
     /// <b>M3-5 起这张名单从七个减到六个，少的那一个是「灵脉等级」</b>——它接上了：§8.8 的
     /// 灵脉六级 → <c>SpiritLandSystem</c> → <c>SpeedMultiplierAt</c> 连乘的第四项。
-    /// <b>缩法不是把关键词删掉</b>：灵脉那个词（<see cref="SpiritVeinTokens"/>）换了个守的对象，
-    /// 仍在守着同一件事（数值只许有一个来源），见下面第二条用例。剩下六个一个都没放走：
-    /// 判据本身一个字没动，还是逐个类型地查，负向对照（替身）也照旧。
+    /// <b>M3-6 起再从六个减到五个，少的那一个是「丹药」</b>——它也接上了：§8.3 的「聚气散 +50%
+    /// 持续 7 天」→ <c>data/buffs/buffs.json</c> → <c>BuffSystem</c> → 连乘的第五项。
+    /// <b>两次的缩法都不是把关键词删掉</b>：灵脉与丹药那两个词（<see cref="SpiritVeinTokens"/> /
+    /// <see cref="PillTokens"/>）各自换了个守的对象，仍在守着同一件事（数值只许有一个来源），
+    /// 见下面两条用例。剩下五个一个都没放走：判据本身一个字没动，还是逐个类型地查，
+    /// 负向对照（替身）也照旧。
     /// </remarks>
     private static readonly string[] UnconnectedFactorTokens =
     {
         "Formation",   // 聚灵阵
         "FengShui",    // 风水
         "Technique",   // 功法品阶
-        "Pill",        // 丹药
         "Mood",        // 心境
         "Heart",
         "Dual",        // 双修
@@ -82,6 +85,37 @@ public class M3Audit_Cultivation
     /// 「判据本身有效」那条里拿它喂聚灵阵替身的断言立刻红——豁免值本身也有用例守着。
     /// </summary>
     private const string SpiritVeinExemption = "SpiritVein";
+
+    /// <summary>
+    /// 丹药（M3-6 起**已经接上**）：它的数值只许有一个来源——<c>data/buffs/buffs.json</c> 那三条，
+    /// 由 <c>BuffSystem</c> 读出来、经 <c>ICultivationSpeedBonus</c>（窄接口）交给打坐。
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>为什么这个关键词留着，而不是从上面那张名单里删掉</b>：删掉之后**修炼速度表那两个类型**
+    /// 就没人守了——把聚气散的 1.5 抄进 <c>cultivation_speed.json</c>（或让那张表自己乘一遍）
+    /// 就是同一个事实存两处，而两份会漂；漂了以后「聚气散到底算了几次」没人说得清
+    /// （同 <see cref="SpiritVeinTokens"/> 留着的理由）。
+    /// </para>
+    /// <para>
+    /// <b>这一条比灵脉那一条更严：一个豁免都不开</b>。灵脉那一族的成员名与关键词同族
+    /// （打坐必须持有 <c>ISpiritVeinSource</c>，名字里就有 "Vein"），不得不按领域豁免；
+    /// 而增益那一族不是——打坐只认一个**窄接口** <c>ICultivationSpeedBonus</c>
+    /// （字段 <c>_speedBonus</c>），名字与 "Pill" 毫无交集。所以这里的判据可以一个字不放：
+    /// 修炼系统里出现含 "Pill" 的成员就说明它开始认识「这是哪一颗丹」了，而那正是
+    /// 「丹药的数长在修炼模块里」的开端。
+    /// </para>
+    /// <para>
+    /// <b>日后 M4 的突破要收「筑基丹」的 id 时，这条会红（那是设计好的）</b>：那时该做的是
+    /// 把判据精确到「速度那一笔账」（例如换个更窄的关键词、或只在速度表那两个类型上查），
+    /// 并把为什么放宽写进注释——**不是把关键词从数组里删掉**。
+    /// </para>
+    /// <para>
+    /// <b>增益那几张表自己的类型不在名单里</b>（<c>BuffTable</c> / <c>BuffSystem</c>…）：
+    /// 它们就是那个「唯一的来源」。这条钉的是**别的类型里没有**。
+    /// </para>
+    /// </remarks>
+    private static readonly string[] PillTokens = { "Pill" };
 
     [Fact]
     public void 灵根与境界定义_没有每层所需修为这类字段_数值在专门的表上()
@@ -128,22 +162,38 @@ public class M3Audit_Cultivation
 
 
     [Fact]
-    public void 修炼速度_没接上的六个因素一个字段都没有_刻意的()
+    public void 修炼速度_没接上的五个因素一个字段都没有_刻意的()
     {
         // §8.3 的表里除了灵根 / 季节 / 时辰，还列着聚灵阵、风水、功法品阶、丹药、心境、双修六行
-        // （第七行「灵脉等级」在 M3-5 接上了，见下一条用例）。它们各自的系统都还不存在，
-        // **先建字段就是建一批没人读的数**——而编出来的数与真数据长得一模一样，将来没人分得清
-        // 「文档写了」与「我们编的」，所以连 TODO 常量都不留（铁律 11）。它们跟着各自的系统一起
-        // 落地，加回来那一刻这条就红。
+        // （灵脉等级在 M3-5 接上了、丹药在 M3-6 接上了，分别见下面两条用例）。它们各自的系统都还
+        // 不存在，**先建字段就是建一批没人读的数**——而编出来的数与真数据长得一模一样，将来没人
+        // 分得清「文档写了」与「我们编的」，所以连 TODO 常量都不留（铁律 11）。它们跟着各自的系统
+        // 一起落地，加回来那一刻这条就红。
         //
-        // M3-5 只把「灵脉」这一个从名单上拿走，**判据本身一个字没动**：还是逐个类型地查、
-        // 还是同一套负向对照。灵脉那一侧不是不守了，而是换了守的对象（下一条用例）。
+        // M3-5 拿走「灵脉」、M3-6 拿走「丹药」，**判据本身一个字没动**：还是逐个类型地查、
+        // 还是同一套负向对照。那两个不是不守了，而是换了守的对象（下面两条用例）。
         // 数据文件那一半由 CultivationSpeedTableTests 的「数据文件里只有打坐的账」守着：
         // 加载器不认识的多余键会被静静忽略，只盯代码看不出来
         Assert.False(HasMemberMatching(typeof(CultivationSystem), UnconnectedFactorTokens));
         Assert.False(HasMemberMatching(typeof(ICultivationSystem), UnconnectedFactorTokens));
         Assert.False(HasMemberMatching(typeof(CultivationSpeedTable), UnconnectedFactorTokens));
         Assert.False(HasMemberMatching(typeof(ICultivationSpeedTable), UnconnectedFactorTokens));
+    }
+
+    [Fact]
+    public void 丹药_数值只有一个来源_别的类型里一个字段都没有_刻意的()
+    {
+        // 丹药的数值只有一个来源：data/buffs/buffs.json 的三条（聚气散 ×1.5 / 灵芽羹 ×1.2）。
+        // **修炼速度表那两个类型一个字段都不许有它**——加成要乘进去的地方只有
+        // CultivationSystem.SpeedMultiplierAt 那一行，让那张表自己也带一份丹药倍率就是同一个事实存两处
+        Assert.False(HasMemberMatching(typeof(CultivationSpeedTable), PillTokens));
+        Assert.False(HasMemberMatching(typeof(ICultivationSpeedTable), PillTokens));
+
+        // 系统那一侧**一个豁免都不开**（理由写在 PillTokens 上）：打坐只持有那个窄接口
+        // （_speedBonus / ICultivationSpeedBonus），名字里没有 "Pill"——所以这里的判据可以一个字不放，
+        // 而「顺手把 §8.3 的 1.5 抄成 PillMultiplier」当场就会被抓住
+        Assert.False(HasMemberMatching(typeof(CultivationSystem), PillTokens));
+        Assert.False(HasMemberMatching(typeof(ICultivationSystem), PillTokens));
     }
 
     [Fact]
@@ -210,10 +260,20 @@ public class M3Audit_Cultivation
             typeof(StandIn.WithSpiritVein), SpiritVeinTokens, exemptToken: SpiritVeinExemption));
 
         // 而豁免是按领域开的，不是「带 Vein 就放行」的漏洞：聚灵阵那个替身**带着同一个豁免**
-        // 过一遍，仍然会被判违规（它含的是另一个关键词）——剩下六个就是这么还守着的。
+        // 过一遍，仍然会被判违规（它含的是另一个关键词）——剩下五个就是这么还守着的。
         // 这一条同时守着豁免值本身：把它改宽（"Spirit"、"S" 之类）就会连这个替身一起放走
         Assert.True(HasMemberMatching(
             typeof(StandIn.WithUnconnectedFactor), UnconnectedFactorTokens, exemptToken: SpiritVeinExemption));
+
+        // 丹药那一条（"Pill"，不开豁免）同样要有负向对照：真有人把 §8.3 的 1.5 抄成系统上的一个
+        // 成员（长的就是 WithPill 这个样子），这条判据必须抓得住它。而它与灵脉那一族各管各的——
+        // 拿灵脉的豁免过一遍，丹药的替身照旧被判违规（两个领域不会互相放行）
+        Assert.True(HasMemberMatching(typeof(StandIn.WithPill), PillTokens));
+        Assert.True(HasMemberMatching(typeof(StandIn.WithPill), PillTokens, exemptToken: SpiritVeinExemption));
+
+        // 尤其不能被「按族豁免」那条思路放走：假如有人给丹药也开一个 "Bonus" 的豁免，
+        // 这个替身（PillMultiplier 里没有 "Bonus"）照旧被判违规——豁免是按族开的，不是万能钥匙
+        Assert.True(HasMemberMatching(typeof(StandIn.WithPill), PillTokens, exemptToken: "Bonus"));
     }
 
     /// <summary>
@@ -260,6 +320,15 @@ public class M3Audit_Cultivation
         public sealed class WithSpiritVein
         {
             public double SpiritVeinMultiplier => 1.1;
+        }
+
+        /// <summary>
+        /// 丹药那一族的负向对照：豁免值改宽（或写法漏掉 "Bonus"）时它必须被判违规——
+        /// 「把 §8.3 的 1.5 抄成系统里的一个成员」长的就是这个样子。
+        /// </summary>
+        public sealed class WithPill
+        {
+            public double PillMultiplier => 1.5;
         }
 
         public sealed class WithNeither

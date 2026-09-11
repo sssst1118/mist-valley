@@ -61,6 +61,7 @@ public class SpiritSenseTests
 
     private static CultivationSystem Cultivation(int stage, string realmId = "qi_refining") =>
         new(Roots, Realms, Speed, SpiritPower, new SpiritLandSystem(Land, "vein_micro", "land_1"),
+            new NoSpeedBonus(),
             "grade_false", rootId: null, realmId, stage);
 
     private static SpiritLandSystem Farm(string veinId = "vein_micro") => new(Land, veinId, "land_1");

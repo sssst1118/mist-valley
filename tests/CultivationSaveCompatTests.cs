@@ -65,7 +65,7 @@ public sealed class CultivationSaveCompatTests : IDisposable
         saves.Save(Slot, new SaveMeta(WorldSeed, "旧农场", "第 1 年 春 3 日 16:00"),
             new ISaveable[] { new RawBlob("time", 1, """{"Year":1,"Season":"Spring","Day":3,"Hour":16,"Minute":0}""") });
 
-        CultivationSystem cultivation = new(Roots, Realms, Speed, SpiritPower, new NoSpiritVein(), "grade_false", null, "qi_refining", 1);
+        CultivationSystem cultivation = new(Roots, Realms, Speed, SpiritPower, new NoSpiritVein(), new NoSpeedBonus(), "grade_false", null, "qi_refining", 1);
 
         Assert.True(saves.Load(Slot, new ISaveable[] { cultivation }));
 
@@ -95,7 +95,7 @@ public sealed class CultivationSaveCompatTests : IDisposable
         saves.Save(Slot, new SaveMeta(WorldSeed, "旧农场", "第 1 年 春 3 日 16:00"),
             new ISaveable[] { new RawBlob("cultivation", 1, version1) });
 
-        CultivationSystem cultivation = new(Roots, Realms, Speed, SpiritPower, new NoSpiritVein(), "grade_false", null, "qi_refining", 1);
+        CultivationSystem cultivation = new(Roots, Realms, Speed, SpiritPower, new NoSpiritVein(), new NoSpeedBonus(), "grade_false", null, "qi_refining", 1);
 
         Assert.True(saves.Load(Slot, new ISaveable[] { cultivation }));
 
@@ -134,7 +134,7 @@ public sealed class CultivationSaveCompatTests : IDisposable
         saves.Save(Slot, new SaveMeta(WorldSeed, "旧农场", "第 1 年 夏 3 日 16:00"),
             new ISaveable[] { new RawBlob("cultivation", 2, version2) });
 
-        CultivationSystem cultivation = new(Roots, Realms, Speed, SpiritPower, new NoSpiritVein(), "grade_false", null, "qi_refining", 1);
+        CultivationSystem cultivation = new(Roots, Realms, Speed, SpiritPower, new NoSpiritVein(), new NoSpeedBonus(), "grade_false", null, "qi_refining", 1);
 
         Assert.True(saves.Load(Slot, new ISaveable[] { cultivation }));
 
@@ -156,7 +156,7 @@ public sealed class CultivationSaveCompatTests : IDisposable
         // 修为要经得起「练到一半就退出游戏」——那正是玩家最常做的事
         var saves = new SqliteSaveService(_saveDirectory);
 
-        CultivationSystem original = new(Roots, Realms, Speed, SpiritPower, new NoSpiritVein(), "grade_heaven", null, "qi_refining", 1);
+        CultivationSystem original = new(Roots, Realms, Speed, SpiritPower, new NoSpiritVein(), new NoSpeedBonus(), "grade_heaven", null, "qi_refining", 1);
         original.Meditate(SpringMorning, 60);
         Assert.Equal(2, original.Stage);          // 天灵根 2.0x × 春 1.10 = 22 点：一层要 10，余 12
         Assert.Equal(12, original.Cultivation);
@@ -164,7 +164,7 @@ public sealed class CultivationSaveCompatTests : IDisposable
         saves.Save(Slot, new SaveMeta(WorldSeed, "新农场", "第 1 年 春 1 日 6:00"),
             new ISaveable[] { original });
 
-        CultivationSystem restored = new(Roots, Realms, Speed, SpiritPower, new NoSpiritVein(), "grade_false", null, "qi_refining", 1);
+        CultivationSystem restored = new(Roots, Realms, Speed, SpiritPower, new NoSpiritVein(), new NoSpeedBonus(), "grade_false", null, "qi_refining", 1);
 
         Assert.True(saves.Load(Slot, new ISaveable[] { restored }));
 
@@ -186,14 +186,14 @@ public sealed class CultivationSaveCompatTests : IDisposable
                     """{ "GradeId": "grade_true_dual", "RootId": null, "RealmId": "qi_refining", "Stage": 4 }"""),
             });
 
-        var migrated = new CultivationSystem(Roots, Realms, Speed, SpiritPower, new NoSpiritVein(), "grade_false", null, "qi_refining", 1);
+        var migrated = new CultivationSystem(Roots, Realms, Speed, SpiritPower, new NoSpiritVein(), new NoSpeedBonus(), "grade_false", null, "qi_refining", 1);
         Assert.True(saves.Load(Slot, new ISaveable[] { migrated }));
         migrated.Meditate(SpringMorning, 60);   // 11 点（替身灵脉 ×1.0，见 NoSpiritVein）
         Assert.True(migrated.TrySpendSpirit(75));   // 四层满池 175 → 100
 
         saves.Save(Slot, new SaveMeta(WorldSeed, "旧农场", "第 1 年 春 4 日 16:00"), new ISaveable[] { migrated });
 
-        CultivationSystem reloaded = new(Roots, Realms, Speed, SpiritPower, new NoSpiritVein(), "grade_false", null, "qi_refining", 1);
+        CultivationSystem reloaded = new(Roots, Realms, Speed, SpiritPower, new NoSpiritVein(), new NoSpeedBonus(), "grade_false", null, "qi_refining", 1);
         Assert.True(saves.Load(Slot, new ISaveable[] { reloaded }));
 
         Assert.Equal(4, reloaded.Stage);

@@ -95,9 +95,32 @@ public sealed class PlayerMotor
     /// </summary>
     public Vector2 Facing { get; private set; }
 
-    /// <summary>每帧由桥接层喂入原始输入轴（未归一化，各分量 -1..1）。</summary>
-    public void Step(Vector2 input)
+    /// <summary>
+    /// 每帧由桥接层喂入原始输入轴（未归一化，各分量 -1..1）与**此刻的移速修正**
+    /// （§8.2 的轻身术 +20% ⇒ 1.2；没有增益时 1.0）。
+    /// </summary>
+    /// <param name="speedMultiplier">
+    /// 把基础速度乘多少。**必须由调用方显式给出，没有缺省值**——缺省成 1.0 的话，
+    /// 「忘了把增益接上线」会表现成「轻身术静默不生效」：用例、无头模式、实机操作全都看不出
+    /// 哪里不对，而那种错只有玩家本人会先发现。
+    /// </param>
+    /// <remarks>
+    /// <b>修正从参数进来，不从构造进来</b>：它是**随游戏时刻变**的量（增益会到期），
+    /// 而 <see cref="PlayerMotor"/> 是个不知道游戏时刻的纯 C# 类（ADR-002）——
+    /// 「现在几点」只有桥接层知道，所以由它每帧问一次增益系统再喂进来
+    /// （同 <c>FarmingSystem.UseOn</c> 收「手上拿的什么」而不是自己去翻背包的做法）。
+    /// </remarks>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// 修正不是正的有限数：0 会把玩家钉在原地、负数会让他反着走、NaN/∞ 会让位置直接发散，
+    /// 三种都不报错，只让操作变得莫名其妙（同构造里那条速度校验的理由）。
+    /// </exception>
+    public void Step(Vector2 input, float speedMultiplier)
     {
+        // 先验修正、再挡零输入：写错的修正值要在每一帧都拦下来，而不是等玩家真的动了才显形
+        if (!float.IsFinite(speedMultiplier) || speedMultiplier <= 0f)
+            throw new ArgumentOutOfRangeException(
+                nameof(speedMultiplier), speedMultiplier, "移速修正必须为正的有限数");
+
         // 先挡零输入：Vector2.Normalize 对零向量会返回 NaN（0 除以 0），
         // 一旦写进 Facing 就再也洗不干净，而且零输入时朝向本就不该被改写。
         if (input == Vector2.Zero)
@@ -111,7 +134,9 @@ public sealed class PlayerMotor
         // 结果长度恒为 1——故这里用归一化而不是先钳位再算。
         Vector2 direction = Vector2.Normalize(input);
 
-        Velocity = direction * _moveSpeed;
+        // 修正乘在速度上，不乘在方向上：朝向（Facing）是「玩家朝哪边」，增益不该改它——
+        // 乘进去会让交互目标格与动画朝向在增益到期的那一刻跳一下
+        Velocity = direction * (_moveSpeed * speedMultiplier);
         Facing = direction;
     }
 }

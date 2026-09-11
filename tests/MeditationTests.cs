@@ -39,7 +39,7 @@ public class MeditationTests
         // 灵脉那一项一律喂替身（×1.0）：§4.2 / §8.3 / 备案 #67/#68 那几组数都不含灵脉，
         // 本文件每个断言里的数都要逐项对得上它们的出处。农场自带的那一成（微型 1.10）与
         // 「灵脉升一级就更快」在 SpiritLandTests 里量——见 NoSpiritVein 的注释
-        new(Roots, Realms, speed ?? Speed, SpiritPower, new NoSpiritVein(), gradeId, rootId: null, realmId, stage);
+        new(Roots, Realms, speed ?? Speed, SpiritPower, new NoSpiritVein(), new NoSpeedBonus(), gradeId, rootId: null, realmId, stage);
 
     // ── 一次打坐到底涨多少 ────────────────────────────────────────────
 

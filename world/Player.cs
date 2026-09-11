@@ -1,4 +1,6 @@
 using Godot;
+using XingGame.Core.Time;
+using XingGame.Systems.Buffs;
 using XingGame.Systems.Farming;
 using XingGame.Systems.Items;
 using XingGame.Systems.Player;
@@ -31,6 +33,12 @@ public partial class Player : CharacterBody2D
     private FarmingSystem _farming = null!;
     private IInventory _inventory = null!;
     private IItemTable _items = null!;
+
+    /// <summary>移速增益（§8.2 的轻身术）。读它要搭配下面的游戏时刻——增益是按时刻到期的。</summary>
+    private IBuffSystem _buffs = null!;
+
+    /// <summary>取「现在几点」只为一件事：问增益系统此刻的移速修正。</summary>
+    private ITimeService _time = null!;
 
     /// <summary>当前选中的快捷栏格（0..8），指向 <see cref="IInventory.Slots"/> 的前 9 格。</summary>
     /// <remarks>
@@ -71,11 +79,15 @@ public partial class Player : CharacterBody2D
         _farming = GameRoot.Services.Get<FarmingSystem>();
         _inventory = GameRoot.Services.Get<IInventory>();
         _items = GameRoot.Services.Get<IItemTable>();
+        _buffs = GameRoot.Services.Get<IBuffSystem>();
+        _time = GameRoot.Services.Get<ITimeService>();
     }
 
     public override void _PhysicsProcess(double delta)
     {
-        _motor.Step(ReadInput());
+        // 移速修正每帧现问：增益会到期，缓存下来就会在到期之后还快着一整段路。
+        // 纯 C# 的 PlayerMotor 不认识游戏时刻（ADR-002），所以由桥上问、桥上喂（同 UseOn 收「手上拿的什么」）
+        _motor.Step(ReadInput(), (float)_buffs.MultiplierFor(BuffTarget.MoveSpeed, _time.Now));
 
         // System.Numerics.Vector2 → Godot 的 Vector2 的转换只在边界处发生（ADR-010）
         System.Numerics.Vector2 velocity = _motor.Velocity;

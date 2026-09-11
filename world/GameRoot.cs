@@ -4,6 +4,7 @@ using XingGame.Core;
 using XingGame.Core.Events;
 using XingGame.Core.Save;
 using XingGame.Core.Time;
+using XingGame.Systems.Buffs;
 using XingGame.Systems.Combat;
 using XingGame.Systems.Crafting;
 using XingGame.Systems.Cultivation;
@@ -193,8 +194,15 @@ public partial class GameRoot : Node
         // 它排在 CultivationSystem 之前——打坐的速度要把灵气浓度当第四项乘进去
         var spiritLand = new SpiritLandSystem(spiritLandTable, StartingVeinId, StartingLandId);
 
+        // M3-6 限时增益：新档身上一条都没有（§4.6 的初始资源里没有丹药，也没有谁能放轻身术），
+        // 所以它只欠那张表。排在 CultivationSystem 之前——打坐速度的第五项就是它。
+        // **那张表本身不注册**：今天没有任何桥接层消费方（「这条增益叫什么」要等画增益图标的界面，
+        // 时长同理），而注册表里躺一个没人取的实现就是一条没人读的产出（铁律 11）——
+        // 第一个消费方出现时再补一行注册，那时它才有意义
+        var buffs = new BuffSystem(BuffTable.LoadDefault());
+
         var cultivation = new CultivationSystem(
-            spiritRoots, realms, cultivationSpeed, spiritPower, spiritLand,
+            spiritRoots, realms, cultivationSpeed, spiritPower, spiritLand, buffs,
             StartingGradeId, rootId: null, StartingRealmId, StartingStage);
 
         // 生活法术要读玩家的层数（解锁）与灵力（消耗），还要改耕地，所以排在两者之后。
@@ -278,6 +286,11 @@ public partial class GameRoot : Node
         services.Register<ISpiritLandSystem>(spiritLand);
         services.Register<ISpiritSenseSystem>(spiritSense);
 
+        // M3-6：增益系统（桥接层每帧问移速修正，见 Player.cs）。打坐要的修炼速度修正由组合根
+        // **构造时注入**（同灵脉那个浓度），不从这里取——注册表取用的都是「随时可能换」的东西，
+        // 而修炼那边只欠一个窄接口
+        services.Register<IBuffSystem>(buffs);
+
         WorldSeed = worldSeed;
         _time = time;
         _saves = saves;
@@ -291,7 +304,7 @@ public partial class GameRoot : Node
         {
             time, inventory, farmland,
             wallet, prices, friendship, codex, ranch, mineProgress, crafting,
-            cultivation, spiritLand,
+            cultivation, spiritLand, buffs,
         };
         if (saves.Load(SaveSlot, _saveables))
         {
