@@ -4,9 +4,15 @@ using XingGame.Core;
 using XingGame.Core.Events;
 using XingGame.Core.Save;
 using XingGame.Core.Time;
+using XingGame.Systems.Combat;
+using XingGame.Systems.Crafting;
+using XingGame.Systems.Economy;
 using XingGame.Systems.Farming;
+using XingGame.Systems.Fishing;
 using XingGame.Systems.Interaction;
 using XingGame.Systems.Items;
+using XingGame.Systems.Npc;
+using XingGame.Systems.Ranching;
 
 namespace XingGame.World;
 
@@ -36,6 +42,15 @@ public partial class GameRoot : Node
     /// <summary>§4.6 初始种子数量。</summary>
     private const int StartingSeedCount = 15;
 
+    /// <summary>§4.6 初始金币。</summary>
+    private const int StartingGold = 500;
+
+    /// <summary>
+    /// 缺省矿洞。§7.1 只有矿洞这一座有数值（沙漠矿洞文档一个数都没给，未录），所以「玩家的那座矿洞」
+    /// 就是它。将来多矿洞时这里换成玩家选中的那座（备案 #50 的电梯入口）。
+    /// </summary>
+    private const string DefaultMineId = "mine_valley";
+
     /// <summary>
     /// 攒下的零头分钟。每帧增量是小数（10 分/秒 ÷ 60fps ≈ 0.167）而 Advance 只收 int，
     /// 不留余数就只能一直 Advance(0)，时间永远不走。
@@ -52,6 +67,9 @@ public partial class GameRoot : Node
 
     /// <summary>留一份引用只为了在 <c>_ExitTree</c> 里退掉它的订阅（ADR-005：不留无主订阅）。</summary>
     private FarmingSystem _farming = null!;
+
+    /// <summary>同上：畜牧订阅了 <c>DayStarted</c>，离树时要退掉。</summary>
+    private RanchingSystem _ranching = null!;
 
     /// <summary>
     /// 本存档位要写的系统清单，读档与写档**共用同一份**。不能各写各的：<c>SqliteSaveService.Save</c>
@@ -93,6 +111,38 @@ public partial class GameRoot : Node
         // 构造即订阅 DayStarted / SeasonChanged，Dispose 即退订——不留无主订阅（ADR-005）。
         var farming = new FarmingSystem(bus, time, crops, farmland, inventory);
 
+        // ——— M2 六个领域模块。顺序就是它们的依赖链，不能随手排 ———
+        // 静态表在加载时就要拿物品表交叉校验（矿石、产物、成品、饲料都得在物品表里），
+        // 所以必然排在 ItemTable 之后，而下面的系统又要拿表去构造。
+        var shops = ShopTable.LoadDefault(items);
+        var npcs = NpcTable.LoadDefault();
+        var fish = FishTable.LoadDefault(items);
+        var animals = AnimalTable.LoadDefault(items);
+        var monsters = MonsterTable.LoadDefault(items);
+        var mines = MineTable.LoadDefault(items);
+        var recipes = RecipeTable.LoadDefault(items);
+
+        // 表是只读数据，这几件才是各自要进存档的状态（见下面的 _saveables）
+        var wallet = new Wallet();
+        var prices = new MarketPrices(items);
+        var friendship = new FriendshipSystem(npcs);
+        var codex = new FishCodex(fish);
+        var ranch = new Ranch(animals);
+        var mineProgress = new MineProgress(mines.Get(DefaultMineId));
+        var crafting = new CraftingSystem(recipes, inventory, items);
+
+        // 商店要读时间判营业时间（§5.2），所以排在 TimeService 之后；钱与货都是从构造时注入的
+        var shopSystem = new ShopSystem(shops, items, inventory, wallet, time, prices);
+
+        // 钓鱼不取 ITimeService：季节/天气/时段由调用方传进来，它自己是纯函数，掷鱼从不读时钟
+        var fishing = new FishingSystem(fish, inventory, codex);
+
+        // 畜牧构造即订阅 DayStarted（产出按天结算，§6.5），Dispose 即退订——不留无主订阅（ADR-005）。
+        // 宠物（猫/狗）§6.5 只说「可互动、影响心情」，没有数值，按模块的定论不实现。
+        var ranching = new RanchingSystem(bus, ranch, inventory);
+
+        var combat = new CombatSystem(monsters, mineProgress, inventory);
+
         // 键是声明的类型参数：这里注册接口，取用方也只能按接口取（ServiceRegistry 的约定）。
         // 先注册再接存档：反序列化期间若某个可存档系统要取服务，注册表已经就绪。
         services.Register<IEventBus>(bus);
@@ -111,13 +161,39 @@ public partial class GameRoot : Node
         // 桥接层的 Interactable 与 InteractPrompt 都必须拿到同一个实例，否则提示永远找不到目标。
         services.Register<IInteractionSystem>(new InteractionSystem());
 
+        // M2 六模块：按接口注册（M2-A 共同规矩第 2 条），别让口子从组合根这里破。
+        services.Register<IEconomySystem>(wallet);
+        services.Register<IShopSystem>(shopSystem);
+        services.Register<IFriendshipSystem>(friendship);
+        services.Register<IFishingSystem>(fishing);
+        services.Register<IRanchingSystem>(ranching);
+        services.Register<ICombatSystem>(combat);
+        services.Register<ICraftingSystem>(crafting);
+
+        // 这几件额外注册，因为它们在模块自己的契约里就是给桥接层取用的入口，且没有第二条路能拿到：
+        // 「按 id 取 NPC」只有 NPC 表能给（好感度接口只按 id 记账、不认名字）；图鉴列表要鱼表加图鉴；
+        // 配方列表 UI、动物目录（买入价）同理。其余的状态件（Ranch / MineProgress / MarketPrices）
+        // 已经能从各自的系统接口读到，不重复注册。
+        services.Register<INpcTable>(npcs);
+        services.Register<IFishTable>(fish);
+        services.Register<FishCodex>(codex);
+        services.Register<IAnimalTable>(animals);
+        services.Register<IRecipeTable>(recipes);
+
         _worldSeed = worldSeed;
         _time = time;
         _saves = saves;
         _farming = farming;
+        _ranching = ranching;
         Services = services;
 
-        _saveables = new ISaveable[] { time, inventory, farmland };
+        // 读档与写档共用这一份。Save 是「先清空 blob 表再写」：漏掉谁就等于把谁从存档里抹掉，
+        // 而症状要等下一次读档才显形——所以这里每加一个系统，构造与注册两处必须一起加。
+        _saveables = new ISaveable[]
+        {
+            time, inventory, farmland,
+            wallet, prices, friendship, codex, ranch, mineProgress, crafting,
+        };
         if (saves.Load(SaveSlot, _saveables))
         {
             GD.Print($"[存档] 已读档 slot {SaveSlot}：世界种子 {_worldSeed}，{GameTimeText(time.Now)}");
@@ -126,7 +202,9 @@ public partial class GameRoot : Node
         {
             // 只有「这个存档位本地不存在」才算新档。不用「背包是空的就发」这类判据：
             // 玩家把背包清空一次就会白拿一份工具，而且他永远不知道自己触发了什么。
-            GrantStartingResources(inventory);
+            // 同理，M1 的旧档（没有任何 M2 模块的 blob）读进来时金币是 0：那份存档的世界里
+            // 玩家早就开过局了，补发一笔钱会凭空改掉他的进度。
+            GrantStartingResources(inventory, wallet);
             SaveState("新档");   // 新游戏：初始状态立刻落盘，下次启动就走读档那条路
         }
 
@@ -136,12 +214,13 @@ public partial class GameRoot : Node
 
     /// <summary>
     /// GameRoot 是 autoload，正常不会离树；留着退订是为了不在总线上留无主订阅——
-    /// 编辑器里重载程序集时，无主订阅会去碰已经死掉的对象。种植系统持有两个订阅，同理。
+    /// 编辑器里重载程序集时，无主订阅会去碰已经死掉的对象。种植（两个订阅）与畜牧，同理。
     /// </summary>
     public override void _ExitTree()
     {
         _dayStartedSubscription?.Dispose();
         _farming?.Dispose();
+        _ranching?.Dispose();
     }
 
     public override void _Process(double delta)
@@ -173,11 +252,16 @@ public partial class GameRoot : Node
     }
 
     /// <summary>
-    /// §4.6 初始资源里 M1 能落地的那部分：五件工具 + 防风草种子 ×15。
-    /// 金币 / 灵石 / 房屋 / 宠物 / 灵根要等各自的系统（M2 经济、M3 灵根），现在不实现（铁律 3）。
+    /// §4.6 初始资源里已经能落地的那部分：金币 500、五件工具、防风草种子 ×15。
     /// </summary>
-    private static void GrantStartingResources(IInventory inventory)
+    /// <remarks>
+    /// <b>灵石不在这里发（刻意的，不是漏了）</b>：§4.6 的「灵石 0」= 背包里有 0 个——灵石是物品
+    /// 而不是货币（备案 #55），钱包根本没有灵石入口，所以「0」天然成立，无需一句代码。
+    /// 房屋 / 宠物 / 灵根 §4.6 也列了，但要等住宅、宠物与灵根系统，M2 不提前实现（铁律 3）。
+    /// </remarks>
+    private static void GrantStartingResources(IInventory inventory, IEconomySystem wallet)
     {
+        wallet.AddGold(StartingGold);
         foreach (string toolId in StartingToolIds) Grant(inventory, toolId, 1);
         Grant(inventory, StartingSeedId, StartingSeedCount);
     }

@@ -1,0 +1,73 @@
+{
+  "_doc": "§12.1 商店系统（design.md 1314-1326）+ §5.2 雾谷镇设施（235-249）。营业钟点左闭右开，closeHour=24 即「到午夜」。schedule 缺省是 ClockRange；Irregular（不定期/随机）不许写钟点，M2 一律视为打烊。goods 只录文档里确有名字的商品，价格一律在物品表里（§12.1 一个价都没给）。",
+  "shops": [
+    {
+      "id": "general_store",
+      "name": "杂货店",
+      "openHour": 9,
+      "closeHour": 17,
+      "goods": [
+        "seed_parsnip", "seed_potato", "seed_strawberry", "seed_spirit_grass",
+        "seed_blueberry", "seed_melon", "seed_fire_spirit_flower",
+        "seed_pumpkin", "seed_cranberry", "seed_gold_spirit_fruit", "seed_ice_spirit_grass",
+
+        "fertilizer_basic", "fertilizer_quality", "fertilizer_speed",
+        "fertilizer_moisture", "fertilizer_deluxe"
+      ]
+    },
+    {
+      "id": "blacksmith",
+      "name": "铁匠铺",
+      "openHour": 9,
+      "closeHour": 16,
+      "goods": [ "material_copper_ore" ]
+    },
+    {
+      "id": "carpenter",
+      "name": "木匠铺",
+      "openHour": 9,
+      "closeHour": 17,
+      "goods": []
+    },
+    {
+      "id": "fish_shop",
+      "name": "鱼店",
+      "openHour": 9,
+      "closeHour": 17,
+      "goods": []
+    },
+    {
+      "id": "tavern",
+      "name": "酒馆",
+      "openHour": 12,
+      "closeHour": 24,
+      "goods": []
+    },
+    {
+      "id": "clinic",
+      "name": "诊所",
+      "openHour": 9,
+      "closeHour": 15,
+      "goods": []
+    },
+    {
+      "id": "desert_shop",
+      "name": "沙漠商店",
+      "openHour": 0,
+      "closeHour": 24,
+      "goods": []
+    },
+    {
+      "id": "traveling_merchant",
+      "name": "旅行商人",
+      "schedule": "Irregular",
+      "goods": []
+    },
+    {
+      "id": "cultivator_market",
+      "name": "修士坊市",
+      "schedule": "Irregular",
+      "goods": []
+    }
+  ]
+}

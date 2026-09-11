@@ -178,37 +178,57 @@ public class ItemTableTests
 
     // ——— 以下是针对缺省数据文件本身的用例：抄错了、漏录了都要有人发现 ———
 
-    [Fact]
-    public void 缺省数据文件_物品集合与文档出处一致()
+    /// <summary>
+    /// M1 那批物品的**基线**：§6.2 的 11 种作物 + 各自的种子 + §12.3 的七种材料 + §4.6 的五种工具。
+    /// </summary>
+    private static readonly string[] M1BaseItemIds =
     {
-        // §6.2 的 11 种作物 + 各自的种子 + §12.3 的七种材料。文档没提的一条都不该有
-        string[] expected =
-        {
-            "crop_parsnip", "crop_potato", "crop_strawberry", "crop_spirit_grass",
-            "crop_blueberry", "crop_melon", "crop_fire_spirit_flower",
-            "crop_pumpkin", "crop_cranberry", "crop_gold_spirit_fruit", "crop_ice_spirit_grass",
+        "crop_parsnip", "crop_potato", "crop_strawberry", "crop_spirit_grass",
+        "crop_blueberry", "crop_melon", "crop_fire_spirit_flower",
+        "crop_pumpkin", "crop_cranberry", "crop_gold_spirit_fruit", "crop_ice_spirit_grass",
 
-            "seed_parsnip", "seed_potato", "seed_strawberry", "seed_spirit_grass",
-            "seed_blueberry", "seed_melon", "seed_fire_spirit_flower",
-            "seed_pumpkin", "seed_cranberry", "seed_gold_spirit_fruit", "seed_ice_spirit_grass",
+        "seed_parsnip", "seed_potato", "seed_strawberry", "seed_spirit_grass",
+        "seed_blueberry", "seed_melon", "seed_fire_spirit_flower",
+        "seed_pumpkin", "seed_cranberry", "seed_gold_spirit_fruit", "seed_ice_spirit_grass",
 
-            "material_wood", "material_coal", "material_copper_ore", "material_copper_ingot",
-            "material_iron_ingot", "material_spirit_spring_water", "material_spirit_stone",
+        "material_wood", "material_coal", "material_copper_ore", "material_copper_ingot",
+        "material_iron_ingot", "material_spirit_spring_water", "material_spirit_stone",
 
-            // §4.6「初始资源」列的五种开局工具——全部在文档里，不是我们造的
-            "tool_hoe", "tool_watering_can", "tool_axe", "tool_pickaxe", "tool_sickle",
-        };
+        "tool_hoe", "tool_watering_can", "tool_axe", "tool_pickaxe", "tool_sickle",
+    };
 
+    [Fact]
+    public void 缺省数据文件_M1_基础物品一条都没丢()
+    {
         ItemTable table = ItemTable.LoadDefault();
 
-        Assert.Equal(expected.OrderBy(id => id, StringComparer.Ordinal).ToArray(),
-                     table.All.Select(item => item.Id).OrderBy(id => id, StringComparer.Ordinal).ToArray());
+        // **只断言「都在」，不比完整集合。**
+        //
+        // M2 起物品按领域分文件（data/items/*.json），每个领域自己加条目。把完整集合写在这一处，
+        // 等于给每次加物品设一个必经的合并点——而分文件本来就是为了消掉这个点（ARCHITECTURE 备案 #42）。
+        //
+        // 各领域**自己的**集合由各自的表测试守（如 FishTableTests 断言鱼的集合与出处逐条对文档），
+        // 它们离数据更近，也更清楚该断言什么。这里只守一件事：**M1 的基线没被人误删**。
+        foreach (string id in M1BaseItemIds)
+            Assert.True(table.TryGet(id, out _), $"M1 的基础物品「{id}」不见了");
 
         // 条数对了但张冠李戴（比如某条作物写成了 Material）也该被发现
         Assert.Equal(11, table.All.Count(item => item.Category == ItemCategory.Crop));
         Assert.Equal(11, table.All.Count(item => item.Category == ItemCategory.Seed));
-        Assert.Equal(7, table.All.Count(item => item.Category == ItemCategory.Material));
-        Assert.Equal(5, table.All.Count(item => item.Category == ItemCategory.Tool));
+
+        // 工具是「至少这五种」：M2 起钓鱼竿等也是 Tool，用一个精确数会把每次新增工具判红
+        foreach (string id in new[] { "tool_hoe", "tool_watering_can", "tool_axe", "tool_pickaxe", "tool_sickle" })
+            Assert.Equal(ItemCategory.Tool, table.Get(id).Category);
+    }
+
+    [Fact]
+    public void 缺省数据文件_跨文件没有重复_id()
+    {
+        // 物品按领域分文件后，**跨文件撞 id 是这种放法最容易出的错**，而两份数据各自的测试
+        // 都发现不了。ItemTable 合并时会抛，这里把这个保证钉住：加载成功即无重复。
+        ItemTable table = ItemTable.LoadDefault();
+
+        Assert.Equal(table.All.Count, table.All.Select(item => item.Id).Distinct(StringComparer.Ordinal).Count());
     }
 
     [Theory]

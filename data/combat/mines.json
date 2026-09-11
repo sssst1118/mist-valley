@@ -1,0 +1,22 @@
+{
+  "note": "数值全部抄自 docs/public/design.md §7.1 矿洞（第 385-397 行）：120 层、每 10 层电梯、每 10 层宝箱、每 30 层灵气浓郁区域（修炼 +50%）、矿石六种。矿石名按文档顺序（铜、铁、金、铱、煤、宝石），此处写的是物品 id。沙漠矿洞（§5.1）文档未给任何数值，故不录。",
+  "mines": [
+    {
+      "id": "mine_valley",
+      "name": "矿洞",
+      "layerCount": 120,
+      "elevatorInterval": 10,
+      "chestInterval": 10,
+      "auraInterval": 30,
+      "auraBonusPercent": 50,
+      "ores": [
+        "material_copper_ore",
+        "material_iron_ore",
+        "material_gold_ore",
+        "material_iridium_ore",
+        "material_coal",
+        "material_gem"
+      ]
+    }
+  ]
+}

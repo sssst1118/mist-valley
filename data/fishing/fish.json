@@ -1,0 +1,12 @@
+{
+  "fish": [
+    { "id": "fish_ghost",     "itemId": "fish_ghost",     "method": "Rod",     "weather": ["Foggy"] },
+    { "id": "fish_jellyfish", "itemId": "fish_jellyfish", "method": "Rod",     "seasons": ["Summer"], "phases": ["LateNight"] },
+    { "id": "fish_spirit",    "itemId": "fish_spirit",    "method": "Rod" },
+    { "id": "fish_sturgeon",  "itemId": "fish_sturgeon",  "method": "Rod" },
+
+    { "id": "fish_lobster",   "itemId": "fish_lobster",   "method": "CrabPot" },
+    { "id": "fish_crab",      "itemId": "fish_crab",      "method": "CrabPot" },
+    { "id": "fish_shrimp",    "itemId": "fish_shrimp",    "method": "CrabPot" }
+  ]
+}

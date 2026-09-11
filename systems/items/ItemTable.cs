@@ -42,8 +42,13 @@ namespace XingGame.Systems.Items;
 /// </summary>
 public sealed class ItemTable : IItemTable
 {
-    /// <summary>缺省物品表位置，相对工程根目录。</summary>
-    public const string DefaultRelativePath = "data/items/items.json";
+    /// <summary>缺省物品表目录，相对工程根目录。目录下所有 <c>*.json</c> 会被合并成一张表。</summary>
+    /// <remarks>
+    /// 按领域分文件（<c>items.json</c> 基础、<c>fishing.json</c> 鱼、<c>ranching.json</c> 畜产…），
+    /// 是为了让每个领域能独立加物品而不去改同一个文件——多人/多 agent 并行时那是必然的撞车点。
+    /// 顺带也是 Mod 友好：覆盖某一个领域的数据不必动其他领域。
+    /// </remarks>
+    public const string DefaultRelativeDirectory = "data/items";
 
     private readonly Dictionary<string, ItemDefinition> _byId;
     private readonly ReadOnlyCollection<ItemDefinition> _all;
@@ -74,7 +79,53 @@ public sealed class ItemTable : IItemTable
             ? definition
             : throw new KeyNotFoundException($"物品表里没有 id 为「{id}」的物品");
 
-    public static ItemTable FromJson(string json)
+    public static ItemTable FromJson(string json) => FromJsonDocuments(new[] { json });
+
+    /// <summary>
+    /// 多份 JSON 合并成一张表。
+    /// </summary>
+    /// <remarks>
+    /// <b>重复 id 跨文件也算错，且报错里带上文件名。</b>物品按领域分文件放，正是为了让各领域
+    /// 独立加东西；而跨文件撞 id 恰恰是这种放法最容易出的错——两份数据各自的测试都发现不了，
+    /// 只能靠这里拦。带上文件名是因为「在哪个文件里」正是修它需要的信息。
+    /// </remarks>
+    public static ItemTable FromJsonDocuments(IEnumerable<string> jsons)
+    {
+        ArgumentNullException.ThrowIfNull(jsons);
+
+        var byId = new Dictionary<string, ItemDefinition>(StringComparer.Ordinal);
+        var all = new List<ItemDefinition>();
+
+        foreach (string json in jsons) AppendDocument(json, byId, all);
+
+        return new ItemTable(byId, all.AsReadOnly());
+    }
+
+    /// <summary>
+    /// 目录下所有 <c>*.json</c> 合并。
+    /// </summary>
+    /// <remarks>
+    /// 先按文件名排序：<c>Directory.GetFiles</c> 的顺序不保证稳定，不排序的话
+    /// <see cref="All"/> 的顺序会随文件系统变化——UI 列表顺序飘忽，测试也会时绿时红。
+    /// </remarks>
+    public static ItemTable FromDirectory(string directory)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(directory);
+
+        string[] files = Directory.GetFiles(directory, "*.json");
+        if (files.Length == 0) throw new FileNotFoundException($"目录里没有任何 *.json：{directory}");
+
+        Array.Sort(files, StringComparer.Ordinal);
+
+        var jsons = new List<string>(files.Length);
+        foreach (string file in files) jsons.Add(File.ReadAllText(file));
+
+        return FromJsonDocuments(jsons);
+    }
+
+    public static ItemTable FromFile(string path) => FromJson(File.ReadAllText(path));
+
+    private static void AppendDocument(string json, Dictionary<string, ItemDefinition> byId, List<ItemDefinition> all)
     {
         using var document = JsonDocument.Parse(json);
 
@@ -84,9 +135,6 @@ public sealed class ItemTable : IItemTable
         {
             throw new InvalidDataException("物品表缺少 items 数组");
         }
-
-        var byId = new Dictionary<string, ItemDefinition>(StringComparer.Ordinal);
-        var all = new List<ItemDefinition>();
 
         foreach (JsonElement element in items.EnumerateArray())
         {
@@ -98,11 +146,7 @@ public sealed class ItemTable : IItemTable
 
             all.Add(definition);
         }
-
-        return new ItemTable(byId, all.AsReadOnly());
     }
-
-    public static ItemTable FromFile(string path) => FromJson(File.ReadAllText(path));
 
     /// <summary>
     /// 从构建输出目录逐级上溯找缺省物品表，与 <c>WeatherTable.LoadDefault()</c> 同款做法
@@ -110,11 +154,11 @@ public sealed class ItemTable : IItemTable
     /// </summary>
     public static ItemTable LoadDefault()
     {
-        string? path = FindDefaultFile();
-        if (path is null)
-            throw new FileNotFoundException($"未找到 {DefaultRelativePath}（已从 {AppContext.BaseDirectory} 逐级上溯）");
+        string? directory = FindDefaultDirectory();
+        if (directory is null)
+            throw new FileNotFoundException($"未找到 {DefaultRelativeDirectory}/（已从 {AppContext.BaseDirectory} 逐级上溯）");
 
-        return FromFile(path);
+        return FromDirectory(directory);
     }
 
     private static ItemDefinition ParseItem(JsonElement element)
@@ -194,14 +238,14 @@ public sealed class ItemTable : IItemTable
         return value.GetInt32();
     }
 
-    private static string? FindDefaultFile()
+    private static string? FindDefaultDirectory()
     {
         foreach (string root in new[] { AppContext.BaseDirectory, Environment.CurrentDirectory })
         {
             for (var directory = new DirectoryInfo(root); directory is not null; directory = directory.Parent)
             {
-                string candidate = Path.Combine(directory.FullName, DefaultRelativePath);
-                if (File.Exists(candidate)) return candidate;
+                string candidate = Path.Combine(directory.FullName, DefaultRelativeDirectory);
+                if (Directory.Exists(candidate)) return candidate;
             }
         }
 

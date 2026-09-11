@@ -1,0 +1,213 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.IO;
+using System.Text.Json;
+using XingGame.Core.Save;
+using XingGame.Systems.Items;
+
+namespace XingGame.Systems.Crafting;
+
+/// <summary>
+/// 制作：把配方表与背包接起来——判定能不能做、扣材料、进成品。
+/// </summary>
+/// <remarks>
+/// <para>
+/// <b>两条失败路径，两条都不许留下痕迹。</b>材料不够时一个材料都不能扣（照 <c>Inventory.Remove</c> 的
+/// 全有或全无，ADR-012）；产物放不下时同样一个材料都不能扣——材料扣了而产物溢出丢失，是玩家主动点
+/// 「制作」时的白扔，而 §12.3 的一条配方动辄 100 灵石。所以两件事都在动手<b>之前</b>查清：材料先逐样核对
+/// （<see cref="HasIngredients"/>），背包容量先自己算（<see cref="HasRoomFor"/>）。
+/// </para>
+/// <para>
+/// 这两条都由用例钉着（<c>CraftingSystemTests</c> 里逐材料比对、以及背包放不下那条），不是注释里的空话。
+/// </para>
+/// </remarks>
+public sealed class CraftingSystem : ICraftingSystem, ISaveable
+{
+    private readonly IRecipeTable _recipes;
+    private readonly IInventory _inventory;
+    private readonly IItemTable _items;
+
+    /// <summary>Ordinal 排序：枚举与存盘共用同一个顺序，存档 diff 才稳定、测试才不会时绿时红。</summary>
+    private readonly SortedSet<string> _unlocked = new(StringComparer.Ordinal);
+
+    /// <summary>只读快照，防止调用方拿到内部集合把它改掉（同 <c>Inventory.Slots</c> 的理由）。</summary>
+    private ReadOnlyCollection<string> _unlockedView;
+
+    /// <param name="items">
+    /// 只为产物的堆叠上限而需要（算背包放不放得下）。配方本身归 <paramref name="recipes"/>。
+    /// </param>
+    public CraftingSystem(IRecipeTable recipes, IInventory inventory, IItemTable items)
+    {
+        _recipes = recipes ?? throw new ArgumentNullException(nameof(recipes));
+        _inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
+        _items = items ?? throw new ArgumentNullException(nameof(items));
+
+        _unlockedView = new List<string>(_unlocked).AsReadOnly();
+    }
+
+    public IReadOnlyCollection<string> UnlockedRecipes => _unlockedView;
+
+    public bool IsUnlocked(string recipeId)
+    {
+        // 未知 id 是编程错误（同 Inventory.Add 取到不存在的物品）：凭空问一个配方表里没有的 id，必然是写错了
+        _recipes.Get(recipeId);
+
+        return _unlocked.Contains(recipeId);
+    }
+
+    public bool Unlock(string recipeId)
+    {
+        _recipes.Get(recipeId);
+
+        if (!_unlocked.Add(recipeId)) return false;
+
+        RefreshView();
+        return true;
+    }
+
+    public bool CanCraft(string recipeId, int count = 1)
+    {
+        if (count <= 0) throw new ArgumentOutOfRangeException(nameof(count), count, "份数必须为正");
+
+        RecipeDefinition recipe = _recipes.Get(recipeId);
+
+        if (!_unlocked.Contains(recipeId)) return false;
+
+        // 判据与 TryCraft 逐条对齐，别让「界面说能做、点下去却没做成」出现
+        return HasIngredients(recipe, count) && HasRoomFor(recipe.OutputItemId, (long)recipe.OutputCount * count);
+    }
+
+    public bool TryCraft(string recipeId, int count = 1)
+    {
+        if (count <= 0) throw new ArgumentOutOfRangeException(nameof(count), count, "份数必须为正");
+
+        RecipeDefinition recipe = _recipes.Get(recipeId);
+
+        if (!_unlocked.Contains(recipeId)) return false;
+
+        // 全有或全无（ADR-012）：先把「每一样材料都够」全部核对完，再动手扣。边扣边查会让
+        // 「扣到第三种才发现不够」变成既成事实——调用方以为没做成，材料却已经少了。
+        if (!HasIngredients(recipe, count)) return false;
+
+        // 产物进不去也要在这里挡住：等扣完材料才发现背包满了，玩家就白扔了一条配方的材料
+        if (!HasRoomFor(recipe.OutputItemId, (long)recipe.OutputCount * count)) return false;
+
+        // 到这里每一样材料都数过够，中间也没有别的调用能插进来（纯 C#、单线程），后面的 Remove 必然成功
+        foreach (RecipeIngredient ingredient in recipe.Ingredients)
+            _inventory.Remove(ingredient.ItemId, (int)((long)ingredient.Count * count));
+
+        _inventory.Add(recipe.OutputItemId, recipe.OutputCount * count);
+        return true;
+    }
+
+    /// <summary>
+    /// 每一样材料都够做 <paramref name="count"/> 份。<b>乘积用 long 算</b>：<c>数量 × 份数</c> 溢出 int 会变成
+    /// 负数，于是「背包里一个都没有」也被判成够——那是静默放行一次本不该发生的制作。
+    /// </summary>
+    private bool HasIngredients(RecipeDefinition recipe, int count)
+    {
+        foreach (RecipeIngredient ingredient in recipe.Ingredients)
+        {
+            if (_inventory.Count(ingredient.ItemId) < (long)ingredient.Count * count) return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// 背包还装不装得下 <paramref name="count"/> 个该物品。
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>这段检查不是可以省掉的防御，别删。</b>删了它，材料照扣、产物却可能进不了背包白白丢掉——
+    /// 这是玩家<b>主动</b>点「制作」时的损失（收获溢出丢一个还能说手滑，这里丢的动辄是 §12.3 一条配方
+    /// 的 100 颗灵石），比事后补偿划算得多。<c>CraftingSystemTests</c> 里有两条用例钉着它。
+    /// </para>
+    /// <para>
+    /// 自己算，而不是「先 Add 一次再看返回值」：<c>Add</c> 装不下时<b>已装进去的那部分不回滚</b>
+    /// （见 <c>Inventory.Add</c> 的说明），先试一次就等于把背包改成了另一个样子，失败后还得再撤回来——
+    /// 撤的过程中槽位布局会变（空出来的格子在前在后与原来不同），凭空多出一个「失败却动了背包」的状态。
+    /// </para>
+    /// <para>
+    /// 数据来自 <see cref="IInventory.Slots"/>（含空槽的定长槽位视图，ADR-012）与物品表的堆叠上限。
+    /// 算出来的是<b>下界</b>：之后扣材料只会让槽位更空、可放的地方只会更多，所以过了这一关，Add 一定装得下。
+    /// </para>
+    /// </remarks>
+    private bool HasRoomFor(string itemId, long count)
+    {
+        int maxStack = _items.Get(itemId).MaxStack;
+        long capacity = 0;
+
+        foreach (ItemStack slot in _inventory.Slots)
+        {
+            // 空槽能放满一整叠；已有同种物品的槽还能放「上限 − 现有」
+            if (slot.Count == 0) capacity += maxStack;
+            else if (string.Equals(slot.ItemId, itemId, StringComparison.Ordinal)) capacity += maxStack - slot.Count;
+
+            if (capacity >= count) return true;
+        }
+
+        return capacity >= count;
+    }
+
+    public string SaveKey => "crafting";
+
+    /// <summary>JSON 形态变了就 +1，并在 <see cref="Deserialize"/> 里按 <c>fromVersion</c> 迁移。</summary>
+    public int Version => 1;
+
+    /// <summary>
+    /// 解锁的配方按<b>id 字符串</b>存，不存它在配方表里的序号（ADR-012：往表中间插一条配方就会让旧存档的
+    /// 序号全部错位）。顺序由 <c>SortedSet</c> 固定为 Ordinal 升序，存档才 diff 得动、测试才不飘。
+    /// </summary>
+    public string Serialize() =>
+        JsonSerializer.Serialize(new SavedCrafting(new List<string>(_unlocked)), _saveJsonOptions);
+
+    public void Deserialize(string json, int fromVersion)
+    {
+        // 来自更新版本的存档不能猜着读：读错数据比读不出来更糟（ADR-009）
+        if (fromVersion > Version)
+            throw new NotSupportedException($"制作存档版本 {fromVersion} 高于当前支持的 {Version}，无法读取");
+
+        SavedCrafting saved = JsonSerializer.Deserialize<SavedCrafting>(json, _saveJsonOptions)
+            ?? throw new InvalidDataException("制作存档内容为空");
+
+        List<string> ids = saved.UnlockedRecipes
+            ?? throw new InvalidDataException("制作存档缺少 UnlockedRecipes 数组");
+
+        // 先整份校验再落盘：坏存档不该让解锁表停在「读了一半」的状态（同 Inventory）
+        var restored = new SortedSet<string>(StringComparer.Ordinal);
+        foreach (string id in ids)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+                throw new InvalidDataException("制作存档里有空的配方 id");
+
+            // 认不出的 id 不能猜着读：多半是配方改了名或 Mod 被卸掉，留着它 UI 照着去表里取，
+            // 会在离病因很远的地方炸
+            if (!_recipes.TryGet(id, out _))
+                throw new InvalidDataException($"制作存档里的配方 id「{id}」不在配方表里");
+
+            restored.Add(id);
+        }
+
+        ReplaceUnlocked(restored);
+    }
+
+    /// <summary>整份替换而不是往现有集合里加：读档是整状态覆盖（ADR-009 未定义项备案 #15）。</summary>
+    private void ReplaceUnlocked(IEnumerable<string> ids)
+    {
+        _unlocked.Clear();
+        foreach (string id in ids) _unlocked.Add(id);
+
+        RefreshView();
+    }
+
+    /// <summary>视图是快照，改完集合必须重建——漏了这一步，UI 会一直看到旧的解锁表。</summary>
+    private void RefreshView() => _unlockedView = new List<string>(_unlocked).AsReadOnly();
+
+    /// <summary>存档 JSON 的形态。私有：外部只该经 <see cref="Serialize"/>/<see cref="Deserialize"/> 碰它。</summary>
+    private sealed record SavedCrafting(List<string> UnlockedRecipes);
+
+    /// <summary>字段名与配方 id 都写出来，存档要能被人和 Mod 读懂（ADR-012），同 <c>Inventory</c>。</summary>
+    private static readonly JsonSerializerOptions _saveJsonOptions = new() { WriteIndented = true };
+}

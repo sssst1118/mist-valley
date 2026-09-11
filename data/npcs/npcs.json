@@ -1,0 +1,32 @@
+{
+  "npcs": [
+    { "id": "npc_mayor",  "name": "罗威尔", "role": "镇长",       "romanceable": false, "birthday": "春 10", "lovedItems": ["南瓜派", "铱锭"],             "hatedItems": ["垃圾"] },
+    { "id": "npc_elena",  "name": "艾琳娜", "role": "图书馆管理员", "romanceable": true,  "birthday": "春 18", "lovedItems": ["旧日记", "钻石"],             "hatedItems": ["鱼"],
+      "schedule": {
+        "rainyLocation": "家",
+        "entries": [
+          { "seasons": ["Spring", "Summer", "Autumn"], "hour": 9,  "location": "图书馆" },
+          { "seasons": ["Spring", "Summer", "Autumn"], "hour": 12, "location": "杂货店" },
+          { "seasons": ["Spring", "Summer", "Autumn"], "hour": 14, "location": "图书馆" },
+          { "seasons": ["Spring", "Summer", "Autumn"], "hour": 18, "location": "酒馆" },
+          { "seasons": ["Spring", "Summer", "Autumn"], "hour": 22, "location": "回家" },
+          { "seasons": ["Winter"], "hour": 10, "location": "图书馆" },
+          { "seasons": ["Winter"], "hour": 13, "location": "诊所" },
+          { "seasons": ["Winter"], "hour": 15, "location": "图书馆" },
+          { "seasons": ["Winter"], "hour": 19, "location": "回家" }
+        ]
+      } },
+    { "id": "npc_brent",  "name": "布伦特", "role": "铁匠",       "romanceable": true,  "birthday": "夏 5",  "lovedItems": ["铁矿", "宝石"],               "hatedItems": ["花"] },
+    { "id": "npc_martha", "name": "玛莎",   "role": "杂货店老板", "romanceable": false, "birthday": "夏 22", "lovedItems": ["草莓", "果酱"],               "hatedItems": ["矿石"] },
+    { "id": "npc_harvey", "name": "哈维",   "role": "医生",       "romanceable": true,  "birthday": "秋 3",  "lovedItems": ["咖啡", "药草"],               "hatedItems": ["酒"] },
+    { "id": "npc_willy",  "name": "威利",   "role": "渔夫",       "romanceable": false, "birthday": "秋 15", "lovedItems": ["鲟鱼", "海藻"],               "hatedItems": ["垃圾"] },
+    { "id": "npc_robin",  "name": "罗宾",   "role": "木匠",       "romanceable": true,  "birthday": "冬 8",  "lovedItems": ["木材", "硬木"],               "hatedItems": ["矿石"] },
+    { "id": "npc_merlin", "name": "墨林",   "role": "巫师",       "romanceable": true,  "birthday": "冬 17", "lovedItems": ["虚空精华", "太阳精华"],        "hatedItems": ["蔬菜"] },
+    { "id": "npc_grace",  "name": "格蕾丝", "role": "酒馆老板",   "romanceable": true,  "birthday": "春 25", "lovedItems": ["葡萄酒", "啤酒"],             "hatedItems": ["鱼"] },
+    { "id": "npc_kaz",    "name": "卡兹",   "role": "旅行商人",   "romanceable": false, "birthday": "夏 12", "lovedItems": ["稀有物品"],                   "hatedItems": ["普通物品"] },
+    { "id": "npc_leah",   "name": "莉亚",   "role": "艺术家",     "romanceable": true,  "birthday": "秋 20", "lovedItems": ["野花", "果酒"],               "hatedItems": ["垃圾"] },
+    { "id": "npc_dan",    "name": "丹",     "role": "矿工",       "romanceable": true,  "birthday": "冬 3",  "lovedItems": ["矿石", "宝石"],               "hatedItems": ["花"] },
+    { "id": "npc_sarah",  "name": "赛拉",   "role": "教师",       "romanceable": true,  "birthday": "春 7",  "lovedItems": ["书籍", "花朵"],               "hatedItems": ["矿石"] },
+    { "id": "npc_nia",    "name": "妮娅",   "role": "神秘少女",   "romanceable": true,  "birthday": "夏 28", "lovedItems": ["月光水母", "珍珠"],           "hatedItems": ["垃圾"] }
+  ]
+}

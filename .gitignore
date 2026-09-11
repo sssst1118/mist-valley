@@ -36,3 +36,6 @@ obj/
 *.swp
 .DS_Store
 Thumbs.db
+
+# ==== 杂散运行时产物（Ollama 等以本目录为工作目录时留下的日志）====
+/Ollama/

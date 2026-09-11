@@ -1,0 +1,16 @@
+{
+  "items": [
+    { "id": "fish_ghost",     "name": "幽灵鱼",   "description": "雾天出没的特殊鱼。",       "category": "Food", "maxStack": 999, "buyPrice": 0, "sellPrice": 0 },
+    { "id": "fish_jellyfish", "name": "水母",     "description": "夏夜出没的特殊鱼。",       "category": "Food", "maxStack": 999, "buyPrice": 0, "sellPrice": 0 },
+    { "id": "fish_spirit",    "name": "灵鱼",     "description": "特殊鱼之一。",             "category": "Food", "maxStack": 999, "buyPrice": 0, "sellPrice": 0 },
+    { "id": "fish_sturgeon",  "name": "鲟鱼",     "description": "渔夫威利最爱的鱼。",       "category": "Food", "maxStack": 999, "buyPrice": 0, "sellPrice": 0 },
+    { "id": "fish_lobster",   "name": "龙虾",     "description": "蟹笼产出。",               "category": "Food", "maxStack": 999, "buyPrice": 0, "sellPrice": 0 },
+    { "id": "fish_crab",      "name": "螃蟹",     "description": "蟹笼产出。",               "category": "Food", "maxStack": 999, "buyPrice": 0, "sellPrice": 0 },
+    { "id": "fish_shrimp",    "name": "虾",       "description": "蟹笼产出。",               "category": "Food", "maxStack": 999, "buyPrice": 0, "sellPrice": 0 },
+
+    { "id": "tool_fishing_rod_bamboo",  "name": "竹竿",     "description": "四种鱼竿之一。", "category": "Tool", "maxStack": 1, "buyPrice": 0, "sellPrice": 0 },
+    { "id": "tool_fishing_rod_glass",   "name": "玻璃鱼竿", "description": "四种鱼竿之一。", "category": "Tool", "maxStack": 1, "buyPrice": 0, "sellPrice": 0 },
+    { "id": "tool_fishing_rod_iridium", "name": "铱鱼竿",   "description": "四种鱼竿之一。", "category": "Tool", "maxStack": 1, "buyPrice": 0, "sellPrice": 0 },
+    { "id": "tool_fishing_rod_spirit",  "name": "灵鱼竿",   "description": "四种鱼竿之一。", "category": "Tool", "maxStack": 1, "buyPrice": 0, "sellPrice": 0 }
+  ]
+}

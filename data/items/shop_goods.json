@@ -1,0 +1,10 @@
+{
+  "_doc": "商店货架上的商品（§12.1 商店系统）。这里只放文档里确有名字、又还没有别家认领的物品——目前是 §6.1 的五种肥料（design.md 第 265 行）。§12.1 一个价格都没给，两个价格字段一律 0（文档未给，待补）。其余各店缺的商品见 systems/economy/ShopTable.cs 的类注释。",
+  "items": [
+    { "id": "fertilizer_basic",    "name": "基础肥料", "description": "§6.1 的五种肥料之一。价格文档未给，待补。", "category": "Misc", "maxStack": 999, "buyPrice": 0, "sellPrice": 0 },
+    { "id": "fertilizer_quality",  "name": "优质肥料", "description": "§6.1 的五种肥料之一。价格文档未给，待补。", "category": "Misc", "maxStack": 999, "buyPrice": 0, "sellPrice": 0 },
+    { "id": "fertilizer_speed",    "name": "速生肥料", "description": "§6.1 的五种肥料之一。价格文档未给，待补。", "category": "Misc", "maxStack": 999, "buyPrice": 0, "sellPrice": 0 },
+    { "id": "fertilizer_moisture", "name": "保湿肥料", "description": "§6.1 的五种肥料之一。价格文档未给，待补。", "category": "Misc", "maxStack": 999, "buyPrice": 0, "sellPrice": 0 },
+    { "id": "fertilizer_deluxe",   "name": "豪华肥料", "description": "§6.1 的五种肥料之一。价格文档未给，待补。", "category": "Misc", "maxStack": 999, "buyPrice": 0, "sellPrice": 0 }
+  ]
+}

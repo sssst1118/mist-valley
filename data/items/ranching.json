@@ -1,0 +1,18 @@
+{
+  "items": [
+    { "id": "food_egg",                      "name": "鸡蛋",     "description": "白鸡的产出，每天一个。",                          "category": "Food",     "maxStack": 999, "buyPrice": 0, "sellPrice": 0 },
+    { "id": "food_large_egg",                "name": "大鸡蛋",   "description": "棕鸡的产出，每天一个。",                          "category": "Food",     "maxStack": 999, "buyPrice": 0, "sellPrice": 0 },
+    { "id": "food_blue_egg",                 "name": "蓝蛋",     "description": "蓝鸡的产出，每天一个。",                          "category": "Food",     "maxStack": 999, "buyPrice": 0, "sellPrice": 0 },
+    { "id": "food_milk",                     "name": "牛奶",     "description": "牛的产出，每天一份；可在奶酪机做成奶酪。",        "category": "Food",     "maxStack": 999, "buyPrice": 0, "sellPrice": 0 },
+    { "id": "food_goat_milk",                "name": "羊奶",     "description": "山羊的产出，每 2 天一份。",                       "category": "Food",     "maxStack": 999, "buyPrice": 0, "sellPrice": 0 },
+    { "id": "material_wool",                 "name": "羊毛",     "description": "羊的产出，每 3 天一份；可在织布机织成布料。",      "category": "Material", "maxStack": 999, "buyPrice": 0, "sellPrice": 0 },
+    { "id": "food_truffle",                  "name": "松露",     "description": "猪的产出，每天一份（§6.5 记为「每天（户外）」，户外条件尚未落地）。", "category": "Food", "maxStack": 999, "buyPrice": 0, "sellPrice": 0 },
+    { "id": "food_duck_egg",                 "name": "鸭蛋",     "description": "鸭的产出，每 2 天一个。",                         "category": "Food",     "maxStack": 999, "buyPrice": 0, "sellPrice": 0 },
+    { "id": "material_spirit_rabbit_fur",    "name": "灵兔毛",   "description": "灵兔的产出，每 3 天一份。",                       "category": "Material", "maxStack": 999, "buyPrice": 0, "sellPrice": 0 },
+    { "id": "material_spirit_fox_fire",      "name": "灵狐火",   "description": "灵狐的产出，每 5 天一份。",                       "category": "Material", "maxStack": 999, "buyPrice": 0, "sellPrice": 0 },
+    { "id": "material_spirit_crane_feather", "name": "灵鹤羽",   "description": "灵鹤的产出，每 7 天一份。",                       "category": "Material", "maxStack": 999, "buyPrice": 0, "sellPrice": 0 },
+
+    { "id": "material_hay",                  "name": "干草",     "description": "普通动物的饲料（§6.5「喂养：干草或放牧」）。来源与价格文档未给，待补。",   "category": "Material", "maxStack": 999, "buyPrice": 0, "sellPrice": 0 },
+    { "id": "material_spirit_grass",         "name": "灵草",     "description": "灵兽的饲料（§6.5「灵兽需喂灵草」）。来源与价格文档未给，待补。",           "category": "Material", "maxStack": 999, "buyPrice": 0, "sellPrice": 0 }
+  ]
+}

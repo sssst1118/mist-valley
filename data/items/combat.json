@@ -1,0 +1,8 @@
+{
+  "items": [
+    { "id": "material_iron_ore",    "name": "铁矿", "description": "矿洞中开采的矿石，可冶炼成铁锭。", "category": "Material", "maxStack": 999, "buyPrice": 0, "sellPrice": 0 },
+    { "id": "material_gold_ore",    "name": "金矿", "description": "矿洞中开采的矿石。",               "category": "Material", "maxStack": 999, "buyPrice": 0, "sellPrice": 0 },
+    { "id": "material_iridium_ore", "name": "铱矿", "description": "矿洞深处开采的稀有矿石。",         "category": "Material", "maxStack": 999, "buyPrice": 0, "sellPrice": 0 },
+    { "id": "material_gem",         "name": "宝石", "description": "矿洞中开采的宝石。",               "category": "Material", "maxStack": 999, "buyPrice": 0, "sellPrice": 0 }
+  ]
+}

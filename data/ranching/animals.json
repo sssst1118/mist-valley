@@ -1,0 +1,15 @@
+{
+  "animals": [
+    { "id": "white_chicken",  "name": "白鸡",   "building": "鸡舍",   "buyPrice": 800,   "produceId": "food_egg",                      "productionIntervalDays": 1, "type": "Normal", "growthDays": 0 },
+    { "id": "brown_chicken",  "name": "棕鸡",   "building": "鸡舍",   "buyPrice": 800,   "produceId": "food_large_egg",                "productionIntervalDays": 1, "type": "Normal", "growthDays": 0 },
+    { "id": "blue_chicken",   "name": "蓝鸡",   "building": "鸡舍",   "buyPrice": 0,     "produceId": "food_blue_egg",                 "productionIntervalDays": 1, "type": "Normal", "growthDays": 0 },
+    { "id": "cow",            "name": "牛",     "building": "畜棚",   "buyPrice": 1500,  "produceId": "food_milk",                     "productionIntervalDays": 1, "type": "Normal", "growthDays": 0 },
+    { "id": "goat",           "name": "山羊",   "building": "畜棚",   "buyPrice": 4000,  "produceId": "food_goat_milk",                "productionIntervalDays": 2, "type": "Normal", "growthDays": 0 },
+    { "id": "sheep",          "name": "羊",     "building": "畜棚",   "buyPrice": 8000,  "produceId": "material_wool",                 "productionIntervalDays": 3, "type": "Normal", "growthDays": 0 },
+    { "id": "pig",            "name": "猪",     "building": "畜棚",   "buyPrice": 16000, "produceId": "food_truffle",                  "productionIntervalDays": 1, "type": "Normal", "growthDays": 0 },
+    { "id": "duck",           "name": "鸭",     "building": "鸡舍",   "buyPrice": 1200,  "produceId": "food_duck_egg",                 "productionIntervalDays": 2, "type": "Normal", "growthDays": 0 },
+    { "id": "spirit_rabbit",  "name": "灵兔",   "building": "灵兽园", "buyPrice": 5000,  "produceId": "material_spirit_rabbit_fur",    "productionIntervalDays": 3, "type": "Spirit", "growthDays": 0 },
+    { "id": "spirit_fox",     "name": "灵狐",   "building": "灵兽园", "buyPrice": 15000, "produceId": "material_spirit_fox_fire",      "productionIntervalDays": 5, "type": "Spirit", "growthDays": 0 },
+    { "id": "spirit_crane",   "name": "灵鹤",   "building": "灵兽园", "buyPrice": 30000, "produceId": "material_spirit_crane_feather", "productionIntervalDays": 7, "type": "Spirit", "growthDays": 0 }
+  ]
+}

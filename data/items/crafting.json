@@ -1,0 +1,16 @@
+{
+  "items": [
+    { "id": "craft_sprinkler",              "name": "洒水器",   "description": "放置后自动浇水。",             "category": "Equipment", "maxStack": 999, "buyPrice": 0, "sellPrice": 0 },
+    { "id": "craft_scarecrow",              "name": "稻草人",   "description": "放在田里的稻草人。",           "category": "Decor",     "maxStack": 999, "buyPrice": 0, "sellPrice": 0 },
+    { "id": "craft_cherry_bomb",            "name": "樱桃炸弹", "description": "一次性的消耗品。",             "category": "Misc",      "maxStack": 999, "buyPrice": 0, "sellPrice": 0 },
+    { "id": "craft_foundation_pill",        "name": "筑基丹",   "description": "二阶丹药，用于辅助筑基。",     "category": "Medicine",  "maxStack": 999, "buyPrice": 0, "sellPrice": 0 },
+    { "id": "craft_spirit_gathering_array", "name": "聚灵阵",   "description": "提升农场灵气浓度。",           "category": "Misc",      "maxStack": 999, "buyPrice": 0, "sellPrice": 0 },
+
+    { "id": "material_flour",               "name": "小麦粉",   "description": "烹饪材料。",                   "category": "Material",  "maxStack": 999, "buyPrice": 0, "sellPrice": 0 },
+    { "id": "material_sugar",               "name": "糖",       "description": "烹饪材料。",                   "category": "Material",  "maxStack": 999, "buyPrice": 0, "sellPrice": 0 },
+
+    { "id": "craft_fried_egg",              "name": "煎蛋",     "description": "恢复 50 体力。",               "category": "Food",      "maxStack": 999, "buyPrice": 0, "sellPrice": 0 },
+    { "id": "craft_pumpkin_pie",            "name": "南瓜派",   "description": "恢复 200 体力，耕种 +2。",     "category": "Food",      "maxStack": 999, "buyPrice": 0, "sellPrice": 0 },
+    { "id": "craft_spirit_grass_soup",      "name": "灵芽羹",   "description": "恢复 300 灵力，修炼速度 +20%，持续 1 天。", "category": "Food", "maxStack": 999, "buyPrice": 0, "sellPrice": 0 }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "note": "怪物名全部来自 docs/public/design.md §7.1（第 387 行）。血量/攻击/掉落/出现层数文档一个字都没给，故一律填 0 或空数组——这是「文档未给，待补」的哨兵值，不是编出来的数值，补数据前请先读 systems/combat/MonsterTable.cs 的类注释。id 是本项目为查表所需的登记名。",
+  "monsters": [
+    { "id": "monster_slime",      "name": "史莱姆",   "maxHealth": 0, "attack": 0, "minLayer": 0, "maxLayer": 0, "drops": [] },
+    { "id": "monster_bat",        "name": "蝙蝠",     "maxHealth": 0, "attack": 0, "minLayer": 0, "maxLayer": 0, "drops": [] },
+    { "id": "monster_skeleton",   "name": "骷髅",     "maxHealth": 0, "attack": 0, "minLayer": 0, "maxLayer": 0, "drops": [] },
+    { "id": "monster_ghost",      "name": "幽灵",     "maxHealth": 0, "attack": 0, "minLayer": 0, "maxLayer": 0, "drops": [] },
+    { "id": "monster_slime_king", "name": "史莱姆王", "maxHealth": 0, "attack": 0, "minLayer": 0, "maxLayer": 0, "drops": [] },
+    { "id": "monster_stone_golem","name": "石魔",     "maxHealth": 0, "attack": 0, "minLayer": 0, "maxLayer": 0, "drops": [] }
+  ]
+}

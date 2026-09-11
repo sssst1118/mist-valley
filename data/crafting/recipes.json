@@ -1,0 +1,87 @@
+{
+  "recipes": [
+    {
+      "id": "recipe_sprinkler",
+      "category": "Device",
+      "outputItemId": "craft_sprinkler",
+      "outputCount": 1,
+      "ingredients": [
+        { "itemId": "material_copper_ingot", "count": 1 },
+        { "itemId": "material_iron_ingot",   "count": 1 }
+      ]
+    },
+    {
+      "id": "recipe_scarecrow",
+      "category": "Decor",
+      "outputItemId": "craft_scarecrow",
+      "outputCount": 1,
+      "ingredients": [
+        { "itemId": "material_wood", "count": 50 },
+        { "itemId": "material_coal", "count": 1 }
+      ]
+    },
+    {
+      "id": "recipe_cherry_bomb",
+      "category": "Consumable",
+      "outputItemId": "craft_cherry_bomb",
+      "outputCount": 1,
+      "ingredients": [
+        { "itemId": "material_copper_ore", "count": 4 },
+        { "itemId": "material_coal",       "count": 1 }
+      ]
+    },
+    {
+      "id": "recipe_foundation_pill",
+      "category": "Pill",
+      "outputItemId": "craft_foundation_pill",
+      "outputCount": 1,
+      "ingredients": [
+        { "itemId": "crop_spirit_grass",            "count": 3 },
+        { "itemId": "material_spirit_spring_water", "count": 1 }
+      ]
+    },
+    {
+      "id": "recipe_spirit_gathering_array",
+      "category": "Formation",
+      "outputItemId": "craft_spirit_gathering_array",
+      "outputCount": 1,
+      "ingredients": [
+        { "itemId": "material_spirit_stone",  "count": 100 },
+        { "itemId": "crop_spirit_grass",      "count": 20 },
+        { "itemId": "crop_gold_spirit_fruit", "count": 5 }
+      ]
+    },
+
+    {
+      "id": "recipe_fried_egg",
+      "category": "Consumable",
+      "outputItemId": "craft_fried_egg",
+      "outputCount": 1,
+      "ingredients": [
+        { "itemId": "food_egg", "count": 1 }
+      ]
+    },
+    {
+      "id": "recipe_pumpkin_pie",
+      "category": "Consumable",
+      "outputItemId": "craft_pumpkin_pie",
+      "outputCount": 1,
+      "ingredients": [
+        { "itemId": "crop_pumpkin",    "count": 1 },
+        { "itemId": "material_flour",  "count": 1 },
+        { "itemId": "food_milk",       "count": 1 },
+        { "itemId": "material_sugar",  "count": 1 }
+      ]
+    },
+    {
+      "id": "recipe_spirit_grass_soup",
+      "category": "Consumable",
+      "outputItemId": "craft_spirit_grass_soup",
+      "outputCount": 1,
+      "ingredients": [
+        { "itemId": "crop_spirit_grass",            "count": 2 },
+        { "itemId": "material_spirit_spring_water", "count": 1 }
+      ]
+    }
+  ]
+}
