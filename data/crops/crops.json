@@ -1,0 +1,15 @@
+{
+  "crops": [
+    { "seedId": "seed_parsnip",            "cropId": "crop_parsnip",            "growthDays": 4,  "regrowable": false },
+    { "seedId": "seed_potato",             "cropId": "crop_potato",             "growthDays": 6,  "regrowable": false },
+    { "seedId": "seed_strawberry",         "cropId": "crop_strawberry",         "growthDays": 8,  "regrowable": true  },
+    { "seedId": "seed_spirit_grass",       "cropId": "crop_spirit_grass",       "growthDays": 12, "regrowable": false },
+    { "seedId": "seed_blueberry",          "cropId": "crop_blueberry",          "growthDays": 13, "regrowable": true  },
+    { "seedId": "seed_melon",              "cropId": "crop_melon",              "growthDays": 12, "regrowable": false },
+    { "seedId": "seed_fire_spirit_flower", "cropId": "crop_fire_spirit_flower", "growthDays": 15, "regrowable": false },
+    { "seedId": "seed_pumpkin",            "cropId": "crop_pumpkin",            "growthDays": 13, "regrowable": false },
+    { "seedId": "seed_cranberry",          "cropId": "crop_cranberry",          "growthDays": 7,  "regrowable": true  },
+    { "seedId": "seed_gold_spirit_fruit",  "cropId": "crop_gold_spirit_fruit",  "growthDays": 18, "regrowable": false },
+    { "seedId": "seed_ice_spirit_grass",   "cropId": "crop_ice_spirit_grass",   "growthDays": 20, "regrowable": false }
+  ]
+}

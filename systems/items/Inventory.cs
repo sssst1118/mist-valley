@@ -171,8 +171,14 @@ public sealed class Inventory : IInventory, ISaveable
         if (string.IsNullOrEmpty(slot.ItemId))
             throw new InvalidDataException($"背包存档第 {index} 格有数量 {slot.Count} 却没有物品 id");
 
-        if (!_items.TryGet(slot.ItemId, out _))
+        if (!_items.TryGet(slot.ItemId, out ItemDefinition definition))
             throw new InvalidDataException($"背包存档第 {index} 格的物品 id「{slot.ItemId}」不在物品表里");
+
+        // 上限决定槽位布局（ADR-012）：放行超上限的格，则「数量 → 占几格」从此对不上，
+        // Add 也会因 MaxStack - Count <= 0 永远跳过它——静默的规则外状态，与槽位数对不上同类
+        if (slot.Count > definition.MaxStack)
+            throw new InvalidDataException(
+                $"背包存档第 {index} 格的数量 {slot.Count} 超过物品「{slot.ItemId}」的堆叠上限 {definition.MaxStack}");
 
         return slot;
     }

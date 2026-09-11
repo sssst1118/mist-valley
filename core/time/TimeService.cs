@@ -122,6 +122,12 @@ public sealed class TimeService : ITimeService, ISaveable
 
         if (saved.Minute < 0 || saved.Minute >= MinutesPerHour)
             throw new InvalidDataException($"时间存档分钟 {saved.Minute} 越界");
+
+        // Weather 也要像 Season 那样过 Enum.IsDefined：JsonStringEnumConverter 默认接受数字，
+        // {"Weather":99} 会被静默读成 (Weather)99，然后渗进天气序列——switch 走 default、
+        // WeatherChanged.Previous 带着 99、还会被原样写回存档。
+        if (!Enum.IsDefined(saved.Weather))
+            throw new InvalidDataException($"时间存档天气值 {(int)saved.Weather} 越界");
     }
 
     /// <summary>存档 JSON 的形态。私有：外部只该经 <see cref="Serialize"/>/<see cref="Deserialize"/> 碰它。</summary>

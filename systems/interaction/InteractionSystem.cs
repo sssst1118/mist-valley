@@ -28,6 +28,7 @@ public sealed class InteractionSystem : IInteractionSystem
     public void Register(IInteractable target)
     {
         ArgumentNullException.ThrowIfNull(target);
+        ValidateRadius(target.Radius);
 
         // 重复注册按「已在册」忽略，不留下第二份条目。Godot 节点离树再入树会重跑 _Ready，
         // 若此处多出一份，_ExitTree 里的一次 Unregister 只删得掉一份，剩下的条目就指向
@@ -97,6 +98,19 @@ public sealed class InteractionSystem : IInteractionSystem
 
         target.Interact();
         return true;
+    }
+
+    /// <summary>
+    /// 「够得着」的判定建立在半径为**正的有限数**这一前提上：负数在 <c>radius * radius</c> 里被平方成
+    /// 正数，于是 Inspector 里多打个负号的效果是「范围反而变大」——方向正好相反且毫无报错；
+    /// NaN 让比较恒假（永远够不着）、+∞ 让全世界都在范围内，同样是静默失效。
+    /// 与 <c>PlayerConfig</c> 的速度、<c>TimeConfig</c> 的流速、<c>Inventory</c> 的槽位数同款：
+    /// 非法输入在入口处就炸，不要等到某次 FindNearest 才显形。
+    /// </summary>
+    private static void ValidateRadius(float radius)
+    {
+        if (!float.IsFinite(radius) || radius <= 0f)
+            throw new ArgumentOutOfRangeException(nameof(radius), radius, "交互半径必须是正的有限数");
     }
 
     /// <summary>
