@@ -25,6 +25,7 @@ public class MeditationTests
     private static readonly SpiritRootTable Roots = SpiritRootTable.LoadDefault();
     private static readonly RealmTable Realms = RealmTable.LoadDefault();
     private static readonly CultivationSpeedTable Speed = CultivationSpeedTable.LoadDefault(Realms);
+    private static readonly SpiritPowerTable SpiritPower = SpiritPowerTable.LoadDefault();
 
     /// <summary>§3.1 的清晨：6:00-9:00 是「打坐修炼」那一段，季节与时辰的倍率都在这里显形。</summary>
     private static GameTime Morning(int day = 1, Season season = Season.Spring) =>
@@ -35,7 +36,7 @@ public class MeditationTests
         string realmId = "qi_refining",
         int stage = 1,
         ICultivationSpeedTable? speed = null) =>
-        new(Roots, Realms, speed ?? Speed, gradeId, rootId: null, realmId, stage);
+        new(Roots, Realms, speed ?? Speed, SpiritPower, gradeId, rootId: null, realmId, stage);
 
     // ── 一次打坐到底涨多少 ────────────────────────────────────────────
 

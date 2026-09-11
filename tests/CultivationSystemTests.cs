@@ -20,13 +20,14 @@ public class CultivationSystemTests
     private static readonly SpiritRootTable Roots = SpiritRootTable.LoadDefault();
     private static readonly RealmTable Realms = RealmTable.LoadDefault();
     private static readonly CultivationSpeedTable Speed = CultivationSpeedTable.LoadDefault(Realms);
+    private static readonly SpiritPowerTable SpiritPower = SpiritPowerTable.LoadDefault();
 
     private static CultivationSystem NewSystem(
         string gradeId = "grade_false",
         string? rootId = null,
         string realmId = "qi_refining",
         int stage = 1) =>
-        new(Roots, Realms, Speed, gradeId, rootId, realmId, stage);
+        new(Roots, Realms, Speed, SpiritPower, gradeId, rootId, realmId, stage);
 
     // ── 读状态 ────────────────────────────────────────────────────────
 
@@ -108,11 +109,13 @@ public class CultivationSystemTests
     public void 构造_表是null_抛()
     {
         Assert.Throws<ArgumentNullException>(
-            () => new CultivationSystem(null!, Realms, Speed, "grade_false", null, "qi_refining", 1));
+            () => new CultivationSystem(null!, Realms, Speed, SpiritPower, "grade_false", null, "qi_refining", 1));
         Assert.Throws<ArgumentNullException>(
-            () => new CultivationSystem(Roots, null!, Speed, "grade_false", null, "qi_refining", 1));
+            () => new CultivationSystem(Roots, null!, Speed, SpiritPower, "grade_false", null, "qi_refining", 1));
         Assert.Throws<ArgumentNullException>(
-            () => new CultivationSystem(Roots, Realms, null!, "grade_false", null, "qi_refining", 1));
+            () => new CultivationSystem(Roots, Realms, null!, SpiritPower, "grade_false", null, "qi_refining", 1));
+        Assert.Throws<ArgumentNullException>(
+            () => new CultivationSystem(Roots, Realms, Speed, null!, "grade_false", null, "qi_refining", 1));
     }
 
     [Fact]
@@ -182,8 +185,9 @@ public class CultivationSystemTests
         CultivationSystem system = NewSystem();
 
         Assert.Equal("cultivation", system.SaveKey);
-        // 2：M3-2 加了「修为」一列，旧档的读法见 ReadCultivation（Version 1 缺这一列时读成 0）
-        Assert.Equal(2, system.Version);
+        // 3：M3-3 加了「灵力」一列（M3-2 的 2 是加了「修为」）。旧档的读法见 ReadCultivation
+        // （Version 1 缺修为时读成 0）与 ReadSpirit（Version 1/2 缺灵力时读成满）
+        Assert.Equal(3, system.Version);
     }
 
     [Fact]
@@ -280,6 +284,68 @@ public class CultivationSystemTests
 
         Assert.Equal(9, loaded.Cultivation);
         Assert.Equal(1, loaded.Stage);
+        Assert.Equal(100, loaded.Spirit);   // 这份 Version 2 的档没有灵力列 → 读成满（见 ReadSpirit）
+    }
+
+    [Fact]
+    public void 存档往返_灵力原样读回()
+    {
+        // 灵力是**花得出去**的资源，读不回来等于玩家白花。读档方用另一个起点构造，
+        // 而且存档里的数（115）与构造出来的初值（一层的 100）不同——否则这条会因为
+        // 「恰好相等」而假绿（同修为往返那条的写法）
+        CultivationSystem saved = NewSystem(stage: 4);   // 四层满池 175
+        Assert.True(saved.TrySpendSpirit(60));           // → 115
+
+        CultivationSystem loaded = NewSystem();
+        loaded.Deserialize(saved.Serialize(), saved.Version);
+
+        Assert.Equal(4, loaded.Stage);
+        Assert.Equal(115, loaded.Spirit);
+        Assert.Equal(175, loaded.MaxSpirit);             // 上限跟着层数回来，它不是存档里的一列
+    }
+
+    [Fact]
+    public void 坏档_Version3_缺灵力字段_当场抛()
+    {
+        // 本版本自己写出去的 blob 一定带着 spirit：缺了说明这份数据不是本系统写的
+        // （被人改过、或写到一半崩了）。这里若也读成「满」或 0，就等于把坏档悄悄当成没花过灵力
+        const string noSpirit = """
+            { "GradeId": "grade_false", "RootId": null, "RealmId": "qi_refining", "Stage": 1, "Cultivation": 0 }
+            """;
+
+        InvalidDataException exception =
+            Assert.Throws<InvalidDataException>(() => NewSystem().Deserialize(noSpirit, fromVersion: 3));
+
+        Assert.Contains("spirit", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    // 负数：凭空倒扣，且会让「够不够花」的判断恒为假
+    [InlineData("""{ "GradeId": "grade_false", "RootId": null, "RealmId": "qi_refining", "Stage": 1, "Cultivation": 0, "Spirit": -1 }""")]
+    // 一层上限 100，记着 101
+    [InlineData("""{ "GradeId": "grade_false", "RootId": null, "RealmId": "qi_refining", "Stage": 1, "Cultivation": 0, "Spirit": 101 }""")]
+    // 四层上限 175（100 + 25 × 3），记着 176
+    [InlineData("""{ "GradeId": "grade_false", "RootId": null, "RealmId": "qi_refining", "Stage": 4, "Cultivation": 0, "Spirit": 176 }""")]
+    // 十三层上限 400，记着 401
+    [InlineData("""{ "GradeId": "grade_false", "RootId": null, "RealmId": "qi_refining", "Stage": 13, "Cultivation": 0, "Spirit": 401 }""")]
+    public void 坏存档_灵力不在本层该有的范围里_当场抛(string json)
+    {
+        // 越上限只可能来自「有人手改存档」或「上限系数被改小」——两种的正确处置都不是悄悄夹一刀
+        Assert.Throws<InvalidDataException>(() => NewSystem().Deserialize(json, fromVersion: 3));
+    }
+
+    [Fact]
+    public void 合法边界_刚好满池是能读的()
+    {
+        // 上一条 theory 的另一半：判据是「> 上限才算坏档」，满池正是最常见的那种档——
+        // 写成 >= 的话，每一个睡过觉的存档都会被当成坏档
+        CultivationSystem loaded = NewSystem();
+        loaded.Deserialize(
+            """{ "GradeId": "grade_false", "RootId": null, "RealmId": "qi_refining", "Stage": 4, "Cultivation": 0, "Spirit": 175 }""",
+            fromVersion: 3);
+
+        Assert.Equal(4, loaded.Stage);
+        Assert.Equal(175, loaded.Spirit);
     }
 
     [Fact]
@@ -343,11 +409,11 @@ public class CultivationSystemTests
     [Fact]
     public void 存档版本过高_抛_NotSupportedException()
     {
-        // 来自更新版本的存档不能猜着读（ADR-009）。当前 Version 是 2，所以拿 3 来试——
-        // 写 2 的话这条会变成「刚好等于当前版本也不许读」，与上一条迁移用例直接矛盾
+        // 来自更新版本的存档不能猜着读（ADR-009）。当前 Version 是 3，所以拿 4 来试——
+        // 写 3 的话这条会变成「刚好等于当前版本也不许读」，与迁移用例直接矛盾
         Assert.Throws<NotSupportedException>(
             () => NewSystem().Deserialize(
                 """{ "GradeId": "grade_false", "RootId": null, "RealmId": "qi_refining", "Stage": 1 }""",
-                fromVersion: 3));
+                fromVersion: 4));
     }
 }

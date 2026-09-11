@@ -55,9 +55,38 @@ public class M3Audit_Cultivation
         Assert.False(HasMemberMatching(typeof(SpiritRootDefinition), CultivationCostTokens));
         Assert.False(HasMemberMatching(typeof(RealmDefinition), CultivationCostTokens));
         Assert.False(HasMemberMatching(typeof(RealmBand), CultivationCostTokens));
-        Assert.False(HasMemberMatching(typeof(CultivationSystem), CultivationCostTokens));
-        Assert.False(HasMemberMatching(typeof(ICultivationSystem), CultivationCostTokens));
+
+        // M3-3 起灵力的消耗原语（TrySpendSpirit）也含 "Spend" 这个词，但它管的是**另一笔账**：
+        // 灵力那组数在 spirit_power.json 上，由替身表用例行为性地钉着（SpiritPowerTests 的
+        // 「换个替身表就换一套数」——系统的成员名里藏不藏数字，只有行为验得出来）。
+        // 所以这里按「不涉灵力」筛一次，而不是把 Spend 从关键词里删掉：删了等于放走 TrySpendCultivation
+        Assert.False(HasMemberMatching(typeof(CultivationSystem), CultivationCostTokens, exemptToken: "Spirit"));
+        Assert.False(HasMemberMatching(typeof(ICultivationSystem), CultivationCostTokens, exemptToken: "Spirit"));
     }
+
+    /// <summary>法术前的那批消耗常量（备案 #70）**刻意不录**：跟着法术那一刀走。</summary>
+    private static readonly string[] SpellCostTokens = { "Cost", "Spell", "Cast" };
+
+    [Fact]
+    public void 灵力_只录上限与恢复_没有法术消耗的常量_刻意的()
+    {
+        // 备案 #70 的四个数（轻身术 10 / 小回春术 30 / 灵雨术 50 / 灵锄术 50）跟着**法术**那一刀走：
+        // 本切片一个调用方都没有，录进来就是四个没人读的常量（铁律 11）。消耗的**原语**在系统上
+        // （TrySpendSpirit），泛得只有「数量」一个参数——「花得起哪几个法术」该由法术表回答。
+        // 数据文件那一半由 SpiritPowerTableTests 的「原始 JSON 里没有法术消耗的键」守着：
+        // 加载器不认识的多余键会被静静忽略，只盯代码看不出来
+        Assert.False(HasMemberMatching(typeof(ISpiritPowerTable), SpellCostTokens));
+        Assert.False(HasMemberMatching(typeof(SpiritPowerTable), SpellCostTokens));
+
+        // 睡眠也不是费率：备案 #71 的第三条是「一步回满」，没有时长可言，所以它不在枚举里
+        // （它是 RecoverSpiritOnSleep 那个零参数入口）——加回来那一刻这条就红
+        Assert.DoesNotContain("Sleep", Enum.GetNames<SpiritRecovery>());
+
+        // 负向对照：判据本身有效，喂给真有这类成员的替身必须判违规
+        Assert.True(HasMemberMatching(typeof(StandIn.WithSpellCost), SpellCostTokens));
+        Assert.False(HasMemberMatching(typeof(StandIn.WithNeither), SpellCostTokens));
+    }
+
 
     [Fact]
     public void 修炼速度_没接上的七个因素一个字段都没有_刻意的()
@@ -117,10 +146,18 @@ public class M3Audit_Cultivation
         Assert.False(HasMemberMatching(typeof(StandIn.WithUnconnectedFactor), EffectTokens));
     }
 
-    /// <summary>类型的所有成员里，有没有名字含任一关键词的。</summary>
-    private static bool HasMemberMatching(Type type, IEnumerable<string> tokens) =>
+    /// <summary>
+    /// 类型的所有成员里，有没有名字含任一关键词的。
+    /// </summary>
+    /// <param name="exemptToken">
+    /// 名字里含这一段的成员不参与判定：同一个关键词有时会**误伤另一个领域**（如 "Spend" 同时命中
+    /// 修为的账与灵力的原语），那时按领域筛一次，比把关键词删掉更安全——删掉等于给所有领域开口子。
+    /// </param>
+    private static bool HasMemberMatching(Type type, IEnumerable<string> tokens, string? exemptToken = null) =>
         type.GetMembers().Any(
-            member => tokens.Any(token => member.Name.Contains(token, StringComparison.OrdinalIgnoreCase)));
+            member => !(exemptToken is not null
+                        && member.Name.Contains(exemptToken, StringComparison.OrdinalIgnoreCase))
+                      && tokens.Any(token => member.Name.Contains(token, StringComparison.OrdinalIgnoreCase)));
 
     /// <summary>只为负向对照存在的替身：判据喂给它必须判违规。</summary>
     private static class StandIn
@@ -128,6 +165,11 @@ public class M3Audit_Cultivation
         public sealed class WithCultivationCost
         {
             public int ExpPerStage => 0;
+        }
+
+        public sealed class WithSpellCost
+        {
+            public int LightBodyCost => 10;
         }
 
         public sealed class WithEffect

@@ -40,6 +40,22 @@ public interface ICultivationSystem
     int Cultivation { get; }
 
     /// <summary>
+    /// 当前的灵力（§8.2「在丹田中积蓄气态灵力」）。**这是唯一被存下来的那一个数**；
+    /// 上限是从层数算出来的，见 <see cref="MaxSpirit"/>。
+    /// </summary>
+    int Spirit { get; }
+
+    /// <summary>
+    /// 当前层数下的灵力上限：<c>100 + 25 × (层 - 1)</c>（备案 #69）。1 层 100、4 层 175、13 层 400。
+    /// </summary>
+    /// <remarks>
+    /// <b>派生量，不是第二份状态</b>：上限现算（<see cref="ISpiritPowerTable.MaxSpiritAt"/>），
+    /// 存档里只有 <see cref="Spirit"/> 一个数。若把上限也存一份，改系数或调层数时两份就会对不上——
+    /// 那正是 M2 那批「同一个事实存两处」的老病（同 <c>worldSeed</c> 不许存两处的理由）。
+    /// </remarks>
+    int MaxSpirit { get; }
+
+    /// <summary>
     /// 此刻打坐有多快（§4.2 灵根 × §8.3 季节 × §8.3 时辰，**相乘**）。
     /// 给 UI 解释「现在打坐多快」用；要算具体涨多少修为走 <see cref="Meditate"/>。
     /// </summary>
@@ -51,6 +67,58 @@ public interface ICultivationSystem
     /// </summary>
     /// <returns>这次打坐**真正记下**的修为：到了炼气十三层之后溢出的部分作废，不算在里面。</returns>
     int Meditate(GameTime now, int minutes);
+
+    /// <summary>
+    /// 花掉 <paramref name="amount"/> 点灵力，**全有或全无**：不够就一点都不扣，返回 false。
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// 失败语义照 <c>Wallet.TrySpendGold</c> 与 <c>Inventory.Remove</c> 的既有惯例（不够就是没发生），
+    /// 不另发明第三种（比如扣到 0 再返回「还差 5 点」）——同一件事两种失败语义，调用方迟早按错的那种写。
+    /// </para>
+    /// <para>
+    /// <b>这是「消耗的原语」，不是法术表</b>：第一个真正的消费者是 §8.2 的「灵气浇灌」（炼气 4 层起，
+    /// 消耗灵力代替浇水），那要接 <c>FarmingSystem</c>，跟着法术那一刀走。本切片**不建**四个法术的
+    /// 消耗常量（备案 #70 的轻身术 10 / 小回春术 30 / 灵雨术 50 / 灵锄术 50）——现在建就是四个
+    /// 没有调用方的数（铁律 11）。
+    /// </para>
+    /// </remarks>
+    /// <exception cref="System.ArgumentOutOfRangeException"><paramref name="amount"/> 不是正数。</exception>
+    bool TrySpendSpirit(int amount);
+
+    /// <summary>
+    /// 玩家用 <paramref name="minutes"/> 游戏分钟做了 <paramref name="recovery"/> 这件事，
+    /// 按对应速率回灵力（备案 #71：清醒 2/小时、打坐 5/小时），**封在上限**。
+    /// </summary>
+    /// <returns>这次**真正回上**的点数：已经在上限时是 0。</returns>
+    /// <remarks>
+    /// <para>
+    /// <b>为什么是显式入口，而不是订阅时间事件自动涨</b>：同 <see cref="Meditate"/>——
+    /// 「这段时间怎么过的」只有桥接层/组合根知道（<c>GameRoot._Process</c> → <c>_time.Advance</c>
+    /// 那一处），系统不该替它猜玩家是在清醒地忙还是坐着入定。
+    /// </para>
+    /// <para>
+    /// <b>打坐这一档刻意不并进 <see cref="Meditate"/>（不是漏做）</b>：两笔账的数据来源不同
+    /// （修为走 §8.3 的速度表，灵力走备案 #71），而且筑基及以上的打坐**回气但不结修为**
+    /// （那边升层要 §8.4 的丹药，<c>Meditate</c> 当场抛）——并进去就没法表达这个状态。
+    /// 所以桥接层做「打坐」这个动作时要调两个入口，各自传同一段时长。
+    /// </para>
+    /// </remarks>
+    /// <exception cref="System.ArgumentOutOfRangeException"><paramref name="minutes"/> 是负数。</exception>
+    /// <exception cref="System.Collections.Generic.KeyNotFoundException">表里没录这一档（见 <see cref="ISpiritPowerTable.RecoveryPerHour"/>）。</exception>
+    int RecoverSpirit(SpiritRecovery recovery, int minutes);
+
+    /// <summary>
+    /// 睡了一觉：灵力**全恢复**（备案 #71 的第三条）。
+    /// </summary>
+    /// <returns>这次**真正回上**的点数：本来就是满的是 0。</returns>
+    /// <remarks>
+    /// <b>落脚点是 <c>ITimeService.Sleep()</c></b>（玩家睡觉时桥接层调的那个入口），
+    /// **不是** <c>DayStarted</c>：玩家在 2:00 昏倒也会跨日（§3.1 的日循环），而昏倒不是睡觉——
+    /// 拿跨日当睡眠，等于昏倒一次白送一池灵力。睡眠不按小时计价（<c>Sleep</c> 是**跳跃**而非流逝），
+    /// 所以它没有时长参数，也不在 <see cref="SpiritRecovery"/> 里。
+    /// </remarks>
+    int RecoverSpiritOnSleep();
 
     /// <summary>
     /// 当前修为是否**已经达到**「<paramref name="realmId"/> 的 <paramref name="stage"/> 层」。

@@ -159,6 +159,10 @@ public partial class GameRoot : Node
         // M3-2 打坐那张账：加载时要拿境界表对上「逐层开销的条数」，所以必然排在 realms 之后
         var cultivationSpeed = CultivationSpeedTable.LoadDefault(realms);
 
+        // M3-3 灵力池：上限公式的系数与两个恢复速率（备案 #69/#71）。它不欠别的模块的顺序——
+        // 上限是层号的一元公式，没有第二张表要与它对条数（层号的上下界由 CultivationSystem 守着）
+        var spiritPower = SpiritPowerTable.LoadDefault();
+
         // 表是只读数据，这几件才是各自要进存档的状态（见下面的 _saveables）
         var wallet = new Wallet();
         var prices = new MarketPrices(items);
@@ -168,7 +172,8 @@ public partial class GameRoot : Node
         var mineProgress = new MineProgress(mines.Get(DefaultMineId));
         var crafting = new CraftingSystem(recipes, inventory, items);
         var cultivation = new CultivationSystem(
-            spiritRoots, realms, cultivationSpeed, StartingGradeId, rootId: null, StartingRealmId, StartingStage);
+            spiritRoots, realms, cultivationSpeed, spiritPower,
+            StartingGradeId, rootId: null, StartingRealmId, StartingStage);
 
         // 商店要读时间判营业时间（§5.2），所以排在 TimeService 之后；钱与货都是从构造时注入的
         var shopSystem = new ShopSystem(shops, items, inventory, wallet, time, prices);
@@ -225,6 +230,9 @@ public partial class GameRoot : Node
         services.Register<ISpiritRootTable>(spiritRoots);
         services.Register<IRealmTable>(realms);
         services.Register<ICultivationSpeedTable>(cultivationSpeed);
+        // M3-3：灵力的上限公式与两个恢复速率也只有表答得出（状态件只答「现在有多少、上限多少」，
+        // 答不出「打坐一小时回几点」——那要读表才知道）
+        services.Register<ISpiritPowerTable>(spiritPower);
         services.Register<ICultivationSystem>(cultivation);
 
         WorldSeed = worldSeed;

@@ -7,14 +7,23 @@ using XingGame.Core.Time;
 namespace XingGame.Systems.Cultivation;
 
 /// <summary>
-/// 玩家的灵根、境界/层数与修为。数据出处：§4.2 六档灵根（<c>docs/public/design.md</c> 162-171 行）、
+/// 玩家的灵根、境界/层数、修为与灵力。数据出处：§4.2 六档灵根（<c>docs/public/design.md</c> 162-171 行）、
 /// §8.1 九大境界与炼气 1-13 层（458-473 行）、§8.2 的三条游戏绑定（496-502 行）、
-/// §8.3 修炼速度体系（804-819 行）。
+/// §8.3 修炼速度体系（804-819 行）；灵力那笔账的数值出自 ARCHITECTURE 未定义项备案 #69/#71，见
+/// <see cref="ISpiritPowerTable"/>。
 /// </summary>
 /// <remarks>
 /// <para>
-/// <b>状态是本类自己持有的，不是从别处推出来的</b>：灵根、境界与修为都是玩家做过的选择/经历的结果，
-/// 没有第二个来源可以算出来，所以要进存档（<see cref="ISaveable"/>，键 <c>cultivation</c>）。
+/// <b>状态是本类自己持有的，不是从别处推出来的</b>：灵根、境界、修为与当前灵力都是玩家做过的选择/
+/// 经历的结果，没有第二个来源可以算出来，所以要进存档（<see cref="ISaveable"/>，键 <c>cultivation</c>）。
+/// <b>灵力上限不在其列</b>：它是从层数算出来的派生量（<see cref="MaxSpirit"/>）。
+/// </para>
+/// <para>
+/// <b>升层时灵力补满（本切片的定论，不是顺手）</b>：上限随层数涨（每层 +25），升层那一刻
+/// <see cref="Meditate"/> 会把当前灵力补到新上限。理由是手感与语义两条：玩家刚跨过一道台阶就看到
+/// 灵力条短了一截，是升层这个奖励时刻最不该有的画面（而「只涨上限」正好是这个观感）；
+/// §8.1 说炼气期就是「引天地灵气入体……在丹田中积蓄气态灵力」，层数上去本来就意味着容量上去、
+/// 当即充满。它也不给玩家开什么口子：升一层要几小时的打坐，换来的只是把池子灌满。
 /// </para>
 /// <para>
 /// <b>构造与读档共用一份查表逻辑，只有层号越界抛的异常不同</b>：构造参数里写错层号是编程错误
@@ -25,8 +34,9 @@ namespace XingGame.Systems.Cultivation;
 /// </para>
 /// <para>
 /// <b>数值一个都不在本类里</b>：基础速度、逐层开销、季节与时辰的倍率全在
-/// <see cref="ICultivationSpeedTable"/>（<c>data/cultivation/cultivation_speed.json</c>）。
-/// 本类只负责「什么时候结算、怎么乘、什么时候升层」。
+/// <see cref="ICultivationSpeedTable"/>（<c>data/cultivation/cultivation_speed.json</c>），
+/// 灵力上限的系数与两个恢复速率全在 <see cref="ISpiritPowerTable"/>
+/// （<c>data/cultivation/spirit_power.json</c>）。本类只负责「什么时候结算、怎么乘、什么时候升层」。
 /// </para>
 /// </remarks>
 public sealed class CultivationSystem : ICultivationSystem, ISaveable
@@ -36,12 +46,14 @@ public sealed class CultivationSystem : ICultivationSystem, ISaveable
     private readonly ISpiritRootTable _roots;
     private readonly IRealmTable _realms;
     private readonly ICultivationSpeedTable _speed;
+    private readonly ISpiritPowerTable _spiritPower;
 
     private SpiritRootGrade _grade = null!;
     private SpiritRootDefinition? _root;
     private RealmDefinition _realm = null!;
     private int _stage;
     private int _cultivation;
+    private int _spirit;
 
     /// <param name="gradeId">§4.2 的品级 id，必填。</param>
     /// <param name="rootId">§4.3/§4.4 的具体灵根 id；四档普通品级传 null。</param>
@@ -50,6 +62,7 @@ public sealed class CultivationSystem : ICultivationSystem, ISaveable
         ISpiritRootTable roots,
         IRealmTable realms,
         ICultivationSpeedTable speed,
+        ISpiritPowerTable spiritPower,
         string gradeId,
         string? rootId,
         string realmId,
@@ -58,6 +71,7 @@ public sealed class CultivationSystem : ICultivationSystem, ISaveable
         _roots = roots ?? throw new ArgumentNullException(nameof(roots));
         _realms = realms ?? throw new ArgumentNullException(nameof(realms));
         _speed = speed ?? throw new ArgumentNullException(nameof(speed));
+        _spiritPower = spiritPower ?? throw new ArgumentNullException(nameof(spiritPower));
 
         (SpiritRootGrade grade, SpiritRootDefinition? root, RealmDefinition realm) =
             Resolve(gradeId, rootId, realmId, "构造参数");
@@ -66,8 +80,11 @@ public sealed class CultivationSystem : ICultivationSystem, ISaveable
             throw new ArgumentOutOfRangeException(
                 nameof(stage), stage, $"{realm.Name}的层号必须在 1..{realm.StageCount} 之间");
 
-        // 新档从「本层一点修为都没攒」开始：起点是构造出来的，不是练出来的
-        Assign(grade, root, realm, stage, cultivation: 0);
+        // 新档从「本层一点修为都没攒」开始：起点是构造出来的，不是练出来的。
+        // 灵力则从「满」开始——丹田初开就有气（§8.1「引天地灵气入体……在丹田中积蓄气态灵力」），
+        // 而且这与旧档的迁移（ReadSpirit 把缺字段读成满）是同一条推理的两端：两处若不一致，
+        // 玩家跨版本读档就会看到灵力条凭空变长或变短
+        Assign(grade, root, realm, stage, cultivation: 0, spirit: _spiritPower.MaxSpiritAt(stage));
     }
 
     public SpiritRootGrade Grade => _grade;
@@ -85,6 +102,18 @@ public sealed class CultivationSystem : ICultivationSystem, ISaveable
     /// <see cref="ICultivationSpeedTable.PointsToAdvance"/>，分子就是它。
     /// </remarks>
     public int Cultivation => _cultivation;
+
+    /// <summary>当前灵力。存档里只存这一个数，上限现算。</summary>
+    public int Spirit => _spirit;
+
+    /// <summary>
+    /// 当前层数下的灵力上限（备案 #69）：<c>100 + 25 × (层 - 1)</c>。
+    /// </summary>
+    /// <remarks>
+    /// 每次读都现算，不缓存：缓存就等于把「层数 → 上限」这条派生关系存了第二份，
+    /// 升层时漏更新一处就会让灵力条画得比上限还长（同「上限不进存档」的理由）。
+    /// </remarks>
+    public int MaxSpirit => _spiritPower.MaxSpiritAt(_stage);
 
     public bool Reaches(string realmId, int stage)
     {
@@ -188,6 +217,10 @@ public sealed class CultivationSystem : ICultivationSystem, ISaveable
         {
             _cultivation -= _speed.PointsToAdvance(_stage);
             _stage++;
+
+            // 升层即回满（见类注释「升层时灵力补满」）：上限刚涨了 25，当前值跟着补上去，
+            // 而不是让它卡在旧上限上——「刚跨过一道台阶，灵力条却短了一截」是升层最坏的手感
+            _spirit = MaxSpirit;
         }
 
         if (_stage < _realm.StageCount) return gained;
@@ -197,15 +230,83 @@ public sealed class CultivationSystem : ICultivationSystem, ISaveable
         return gained - dropped;
     }
 
+    /// <summary>
+    /// 花掉 <paramref name="amount"/> 点灵力，全有或全无。
+    /// </summary>
+    /// <remarks>
+    /// <b>先比较、后相减的顺序就是这条承诺本身</b>——反过来写（先扣再比）在不够的时候会留下一个
+    /// 已经被改小的池子（照 <c>Wallet.TrySpendGold</c> 的写法）。
+    /// </remarks>
+    public bool TrySpendSpirit(int amount)
+    {
+        if (amount <= 0)
+            throw new ArgumentOutOfRangeException(nameof(amount), amount, "消耗灵力的数量必须为正；回灵力请用 RecoverSpirit");
+
+        if (_spirit < amount) return false;
+
+        _spirit -= amount;
+        return true;
+    }
+
+    /// <summary>
+    /// 按备案 #71 的速率回灵力，封在上限。返回**真正回上**的点数。
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// <b>一次调用只舍一次零头</b>（同 <see cref="Meditate"/>）：结果四舍五入到整点，
+    /// 所以调用方应当按**整段**传时长，别拿一分钟的碎片来调——2 点/小时的费率下，一分钟的零头
+    /// 会被舍成 0。费率越低越明显，而症状是「灵力怎么不涨」。
+    /// </para>
+    /// <para>
+    /// <b>刻意不留「不足一点的零头」这个缓冲字段（不是漏做）</b>：那会是一份**没进存档的状态**——
+    /// 存下去等于又多一列要迁移的数据，不存就等于每次读档悄悄丢掉最多一点灵力，两条都不是好选择。
+    /// 有 <c>SpiritPowerTests</c> 的用例钉着这条约定。
+    /// </para>
+    /// </remarks>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="minutes"/> 是负数。</exception>
+    public int RecoverSpirit(SpiritRecovery recovery, int minutes)
+    {
+        if (minutes < 0)
+            throw new ArgumentOutOfRangeException(nameof(minutes), minutes, "恢复时长不能是负数");
+
+        int restored = (int)Math.Round(
+            minutes / (double)MinutesPerHour * _spiritPower.RecoveryPerHour(recovery),
+            MidpointRounding.AwayFromZero);
+
+        return Restore(restored);
+    }
+
+    /// <summary>睡了一觉：灵力全恢复（备案 #71 的第三条）。见 <see cref="ICultivationSystem"/> 里的入口说明。</summary>
+    public int RecoverSpiritOnSleep() => Restore(MaxSpirit);
+
+    /// <summary>
+    /// 把 <paramref name="amount"/> 点灵力加进池子，**封在上限**；返回真正加上的点数。
+    /// </summary>
+    /// <remarks>
+    /// 三个入口（清醒 / 打坐 / 睡眠）共用这一处封顶：分散在三处写 <c>Math.Min</c> 早晚会漏一处，
+    /// 而漏的那一处就是「灵力超过上限」——症状要到 UI 把灵力条画爆才显形。
+    /// </remarks>
+    private int Restore(int amount)
+    {
+        int room = MaxSpirit - _spirit;
+        int restored = Math.Min(amount, room);
+
+        _spirit += restored;
+        return restored;
+    }
+
     public string SaveKey => "cultivation";
 
     /// <summary>JSON 形态变了就 +1，并在 <see cref="Deserialize"/> 里按 <c>fromVersion</c> 迁移。</summary>
-    /// <remarks><b>2</b>：加了「修为」一列。Version 1 的旧档怎么读见 <see cref="ReadCultivation"/>。</remarks>
-    public int Version => 2;
+    /// <remarks>
+    /// <b>2</b>：加了「修为」一列（Version 1 的旧档怎么读见 <see cref="ReadCultivation"/>）。
+    /// <b>3</b>：加了「灵力」一列（Version 1/2 的旧档怎么读见 <see cref="ReadSpirit"/>）。
+    /// </remarks>
+    public int Version => 3;
 
     public string Serialize() =>
         JsonSerializer.Serialize(
-            new SavedCultivation(_grade.Id, _root?.Id, _realm.Id, _stage, _cultivation), _saveJsonOptions);
+            new SavedCultivation(_grade.Id, _root?.Id, _realm.Id, _stage, _cultivation, _spirit), _saveJsonOptions);
 
     public void Deserialize(string json, int fromVersion)
     {
@@ -237,8 +338,11 @@ public sealed class CultivationSystem : ICultivationSystem, ISaveable
         int cultivation = ReadCultivation(saved, fromVersion);
         RequireCultivationInRange(cultivation, realm, stage);
 
+        int spirit = ReadSpirit(saved, fromVersion, realm, stage);
+        RequireSpiritInRange(spirit, realm, stage);
+
         // 先整份校验再落盘：坏存档不该让境界停在「读了一半」的状态（照 Inventory / FriendshipSystem 先例）
-        Assign(grade, root, realm, stage, cultivation);
+        Assign(grade, root, realm, stage, cultivation, spirit);
     }
 
     /// <summary>
@@ -305,6 +409,49 @@ public sealed class CultivationSystem : ICultivationSystem, ISaveable
     }
 
     /// <summary>
+    /// 读出「当前灵力」，并在这里把旧档与新档分开。
+    /// </summary>
+    /// <remarks>
+    /// <b>Version 1/2 的存档里没有这一列，读成「满」是**迁移决定**，不是猜着读</b>：那两版的 JSON 里
+    /// 根本没有灵力这个概念——没有任何入口能花掉它（消耗的原语与第一个消费者「灵气浇灌」都在本切片
+    /// 之后），而能改动它的只有恢复，于是那份存档里的灵力只可能还停在满上。这与构造里「新档灵力取满」
+    /// 是同一条推理的两端：跨版本读档时，玩家的灵力条不会凭空变化（读成 0 则会让老玩家发现自己的
+    /// 池子是空的，而按 2/小时要挂机几十个小时才回得满，且他根本不知道自己少了什么）。
+    /// <b>同样的缺席在 Version 3 里就是坏档</b>：本版本自己写出去的 blob 一定带着这一列，
+    /// 缺了说明这份数据不是本系统写的（被人改过、或写到一半崩了）。
+    /// 分界线就是 <paramref name="fromVersion"/>——AGENT-BRIEF 那条「『字段不在』与『字段是 0』
+    /// 不是一回事」，能合并的只有这一种情况：旧格式里它压根不存在。
+    /// </remarks>
+    private int ReadSpirit(SavedCultivation saved, int fromVersion, RealmDefinition realm, int stage)
+    {
+        if (saved.Spirit is int stored) return stored;
+
+        if (fromVersion < 3) return _spiritPower.MaxSpiritAt(stage);
+
+        throw new InvalidDataException("修仙存档缺少 spirit 字段");
+    }
+
+    /// <summary>
+    /// 灵力必须落在 <c>[0, 这一层的上限]</c> 之内。
+    /// </summary>
+    /// <remarks>
+    /// <b>为什么越上限就算坏档，而不是夹到上限上</b>：夹一刀等于替玩家改档（同修为那条的推理）。
+    /// 越上限只可能来自两处：有人手改了存档，或上限公式的系数被改小——后者的正确处置是补一条迁移
+    /// （像 <see cref="ReadSpirit"/> 那样写清怎么改），不是把这条判据放宽。
+    /// </remarks>
+    private void RequireSpiritInRange(int spirit, RealmDefinition realm, int stage)
+    {
+        if (spirit < 0)
+            throw new InvalidDataException($"修仙存档里的灵力 {spirit} 是负数");
+
+        int max = _spiritPower.MaxSpiritAt(stage);
+        if (spirit > max)
+            throw new InvalidDataException(
+                $"修仙存档在{realm.Name}{realm.StageName(stage)}上记着 {spirit} 灵力，"
+                + $"超过这一层的上限 {max}——这个档自相矛盾");
+    }
+
+    /// <summary>
     /// 按 id 查出灵根与境界，并把两处对不上的情况拦下。
     /// </summary>
     /// <remarks>
@@ -336,15 +483,17 @@ public sealed class CultivationSystem : ICultivationSystem, ISaveable
         return (grade, root, realm);
     }
 
-    /// <summary>五个字段一起换：分开赋值会让「读了一半」成为可能。</summary>
+    /// <summary>六个字段一起换：分开赋值会让「读了一半」成为可能。</summary>
     private void Assign(
-        SpiritRootGrade grade, SpiritRootDefinition? root, RealmDefinition realm, int stage, int cultivation)
+        SpiritRootGrade grade, SpiritRootDefinition? root, RealmDefinition realm, int stage,
+        int cultivation, int spirit)
     {
         _grade = grade;
         _root = root;
         _realm = realm;
         _stage = stage;
         _cultivation = cultivation;
+        _spirit = spirit;
     }
 
     /// <summary>
@@ -353,11 +502,14 @@ public sealed class CultivationSystem : ICultivationSystem, ISaveable
     /// <remarks>
     /// <c>Stage</c> 可空是为了把「字段不在」与「写了 0」分开（ADR-009）：层号的合法值从 1 起，
     /// 静默读成 0 会让玩家停在一个不存在的层次上。
-    /// <c>Cultivation</c> 也可空，但缺席的含义**按 <c>fromVersion</c> 分岔**：Version 1 的旧档读成 0
-    /// （迁移决定），Version 2 缺它就是坏档——判据在 <see cref="ReadCultivation"/> 里，两者绝不混着读。
+    /// <c>Cultivation</c> 与 <c>Spirit</c> 也可空，但缺席的含义**按 <c>fromVersion</c> 分岔**：
+    /// Version 1 的旧档没有修为、Version 1/2 的旧档没有灵力，分别读成 0 与满
+    /// （都是迁移决定，判据在 <see cref="ReadCultivation"/> / <see cref="ReadSpirit"/> 里，
+    /// 两者绝不混着读）；缺了本版本该有的那一列就是坏档。
     /// <c>RootId</c> 不设这个区分：null 与「字段不在」在这里本来就是一个意思——没有具体灵根。
     /// </remarks>
-    private sealed record SavedCultivation(string? GradeId, string? RootId, string? RealmId, int? Stage, int? Cultivation);
+    private sealed record SavedCultivation(
+        string? GradeId, string? RootId, string? RealmId, int? Stage, int? Cultivation, int? Spirit);
 
     /// <summary>字段名写全，存档要能被人和 Mod 读懂（ADR-012）。</summary>
     private static readonly JsonSerializerOptions _saveJsonOptions = new() { WriteIndented = true };
