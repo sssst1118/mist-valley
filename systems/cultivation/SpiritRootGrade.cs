@@ -16,9 +16,10 @@ namespace XingGame.Systems.Cultivation;
 /// 看成 0.1（=10%）就会静默差 100 倍。用 <see cref="double"/> 是因为 0.1% 不是整数。
 /// </para>
 /// <para>
-/// <b>不建「每层所需修为」这类字段（刻意的，不是漏做）</b>：设计文档没有这个数，
-/// <c>ARCHITECTURE.md</c> 备案 #67/#68 里推导的那组值至今仍是「待用户裁决」。
-/// 见 <c>tests/M3Audit_Cultivation.cs</c> 里钉住这条决定的用例。
+/// <b>「每层所需修为」不在这里（刻意的，不是漏做）</b>：档位管的是倍率、进度曲线管的是开销，
+/// 两者出处不同（§4.2 的倍率 vs 未定义项备案 #67 的推导）。那组数落在 M3-2 的
+/// <see cref="CultivationSpeedTable"/> 上；本记录只有 §4.2 那张表里的列。
+/// 钉住这条分工的用例在 <c>tests/M3Audit_Cultivation.cs</c>。
 /// </para>
 /// </remarks>
 public sealed record SpiritRootGrade(

@@ -6,7 +6,7 @@ using XingGame.Systems.Cultivation;
 namespace XingGame.Tests;
 
 /// <summary>
-/// 修仙骨架（M3-1）的对抗性审计：本切片**刻意不做**的那些事，用反射钉住。
+/// 修仙骨架（M3-1）与打坐（M3-2）的对抗性审计：**刻意不做**的那些事，用反射钉住。
 /// </summary>
 /// <remarks>
 /// <para>
@@ -28,18 +28,50 @@ public class M3Audit_Cultivation
     /// <summary>灵根特效的**机制**也不许有：本切片只录文本，不落成任何加成或行为。</summary>
     private static readonly string[] EffectTokens = { "Damage", "Freeze", "Teleport", "Invisible", "Bonus" };
 
-    [Fact]
-    public void 灵根与境界_没有每层所需修为这类字段_刻意的()
+    /// <summary>
+    /// §8.3 的表里**还没接上**的那七个因素（灵脉等级 / 聚灵阵 / 风水 / 功法品阶 / 丹药 / 心境 /
+    /// 双修）一个字段都不许有。它们的系统都还不存在，见下面的用例。
+    /// </summary>
+    private static readonly string[] UnconnectedFactorTokens =
     {
-        // 设计文档没给这个数；ARCHITECTURE 备案 #67/#68 里推导的那组（10 × n、10 修为/小时）
-        // 至今仍是「待用户裁决」。本切片一个字段都不建，也不填 0 占位——
-        // 编出来的数和真数据长得一模一样，将来没人分得清「文档没写」与「文档写了 0」
+        "Vein",        // 灵脉等级
+        "Formation",   // 聚灵阵
+        "FengShui",    // 风水
+        "Technique",   // 功法品阶
+        "Pill",        // 丹药
+        "Mood",        // 心境
+        "Heart",
+        "Dual",        // 双修
+    };
+
+    [Fact]
+    public void 灵根与境界定义_没有每层所需修为这类字段_数值在专门的表上()
+    {
+        // M3-1 那轮这个数还没定（备案 #67/#68 当时是「待用户裁决」），所以一个字段都不建；
+        // M3-2 定下来之后它落在 CultivationSpeedTable 上，**不是**落在灵根品级与境界定义里：
+        // 档位管倍率、境界管名字与层次、进度曲线管开销——三者分开，改一处牵不动另两处。
+        // 系统类也不许自己藏一份数值（修为是「本层已攒的进度」，阈值只有表答得出）
         Assert.False(HasMemberMatching(typeof(SpiritRootGrade), CultivationCostTokens));
         Assert.False(HasMemberMatching(typeof(SpiritRootDefinition), CultivationCostTokens));
         Assert.False(HasMemberMatching(typeof(RealmDefinition), CultivationCostTokens));
         Assert.False(HasMemberMatching(typeof(RealmBand), CultivationCostTokens));
         Assert.False(HasMemberMatching(typeof(CultivationSystem), CultivationCostTokens));
         Assert.False(HasMemberMatching(typeof(ICultivationSystem), CultivationCostTokens));
+    }
+
+    [Fact]
+    public void 修炼速度_没接上的七个因素一个字段都没有_刻意的()
+    {
+        // §8.3 的表里除了灵根 / 季节 / 时辰，还列着灵脉等级、聚灵阵、风水、功法品阶、丹药、
+        // 心境、双修七行。它们各自的系统都还不存在，**先建字段就是建一批没人读的数**——
+        // 而编出来的数与真数据长得一模一样，将来没人分得清「文档写了」与「我们编的」，
+        // 所以连 TODO 常量都不留（铁律 11）。它们跟着各自的系统一起落地，加回来那一刻这条就红。
+        // 数据文件那一半由 CultivationSpeedTableTests 的「数据文件里没有那七个因素的字段」守着：
+        // 加载器不认识的多余键会被静静忽略，只盯代码看不出来
+        Assert.False(HasMemberMatching(typeof(CultivationSystem), UnconnectedFactorTokens));
+        Assert.False(HasMemberMatching(typeof(ICultivationSystem), UnconnectedFactorTokens));
+        Assert.False(HasMemberMatching(typeof(CultivationSpeedTable), UnconnectedFactorTokens));
+        Assert.False(HasMemberMatching(typeof(ICultivationSpeedTable), UnconnectedFactorTokens));
     }
 
     [Fact]
@@ -75,8 +107,14 @@ public class M3Audit_Cultivation
     {
         Assert.True(HasMemberMatching(typeof(StandIn.WithCultivationCost), CultivationCostTokens));
         Assert.True(HasMemberMatching(typeof(StandIn.WithEffect), EffectTokens));
+        Assert.True(HasMemberMatching(typeof(StandIn.WithUnconnectedFactor), UnconnectedFactorTokens));
         Assert.False(HasMemberMatching(typeof(StandIn.WithNeither), CultivationCostTokens));
         Assert.False(HasMemberMatching(typeof(StandIn.WithNeither), EffectTokens));
+        Assert.False(HasMemberMatching(typeof(StandIn.WithNeither), UnconnectedFactorTokens));
+
+        // 上面四条「本类型里没有」的断言全是**否定式**：判据要是坏了（关键词写错、反射查错了类型），
+        // 它们会整整齐齐地全绿。这条与下面那个替身就是防这个的
+        Assert.False(HasMemberMatching(typeof(StandIn.WithUnconnectedFactor), EffectTokens));
     }
 
     /// <summary>类型的所有成员里，有没有名字含任一关键词的。</summary>
@@ -95,6 +133,11 @@ public class M3Audit_Cultivation
         public sealed class WithEffect
         {
             public double DamageBonus => 0;
+        }
+
+        public sealed class WithUnconnectedFactor
+        {
+            public double SpiritVeinMultiplier => 1.1;
         }
 
         public sealed class WithNeither

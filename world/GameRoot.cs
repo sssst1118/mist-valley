@@ -156,6 +156,9 @@ public partial class GameRoot : Node
         var spiritRoots = SpiritRootTable.LoadDefault();
         var realms = RealmTable.LoadDefault();
 
+        // M3-2 打坐那张账：加载时要拿境界表对上「逐层开销的条数」，所以必然排在 realms 之后
+        var cultivationSpeed = CultivationSpeedTable.LoadDefault(realms);
+
         // 表是只读数据，这几件才是各自要进存档的状态（见下面的 _saveables）
         var wallet = new Wallet();
         var prices = new MarketPrices(items);
@@ -165,7 +168,7 @@ public partial class GameRoot : Node
         var mineProgress = new MineProgress(mines.Get(DefaultMineId));
         var crafting = new CraftingSystem(recipes, inventory, items);
         var cultivation = new CultivationSystem(
-            spiritRoots, realms, StartingGradeId, rootId: null, StartingRealmId, StartingStage);
+            spiritRoots, realms, cultivationSpeed, StartingGradeId, rootId: null, StartingRealmId, StartingStage);
 
         // 商店要读时间判营业时间（§5.2），所以排在 TimeService 之后；钱与货都是从构造时注入的
         var shopSystem = new ShopSystem(shops, items, inventory, wallet, time, prices);
@@ -218,8 +221,10 @@ public partial class GameRoot : Node
 
         // M3-1：玩家的灵根与境界按接口注册；两张表也注册，因为「六档品级各是什么」与
         // 「九大境界各是什么」只有表答得出（状态件只答「玩家现在在哪一档」）。
+        // M3-2 的打坐账同理：进度条要的「升到下一层还差多少」只有它答得出。
         services.Register<ISpiritRootTable>(spiritRoots);
         services.Register<IRealmTable>(realms);
+        services.Register<ICultivationSpeedTable>(cultivationSpeed);
         services.Register<ICultivationSystem>(cultivation);
 
         WorldSeed = worldSeed;

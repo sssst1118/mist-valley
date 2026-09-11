@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using XingGame.Core.Time;
 using XingGame.Systems.Cultivation;
 
 namespace XingGame.Tests;
@@ -18,13 +19,14 @@ public class CultivationSystemTests
 {
     private static readonly SpiritRootTable Roots = SpiritRootTable.LoadDefault();
     private static readonly RealmTable Realms = RealmTable.LoadDefault();
+    private static readonly CultivationSpeedTable Speed = CultivationSpeedTable.LoadDefault(Realms);
 
     private static CultivationSystem NewSystem(
         string gradeId = "grade_false",
         string? rootId = null,
         string realmId = "qi_refining",
         int stage = 1) =>
-        new(Roots, Realms, gradeId, rootId, realmId, stage);
+        new(Roots, Realms, Speed, gradeId, rootId, realmId, stage);
 
     // ── 读状态 ────────────────────────────────────────────────────────
 
@@ -106,9 +108,19 @@ public class CultivationSystemTests
     public void 构造_表是null_抛()
     {
         Assert.Throws<ArgumentNullException>(
-            () => new CultivationSystem(null!, Realms, "grade_false", null, "qi_refining", 1));
+            () => new CultivationSystem(null!, Realms, Speed, "grade_false", null, "qi_refining", 1));
         Assert.Throws<ArgumentNullException>(
-            () => new CultivationSystem(Roots, null!, "grade_false", null, "qi_refining", 1));
+            () => new CultivationSystem(Roots, null!, Speed, "grade_false", null, "qi_refining", 1));
+        Assert.Throws<ArgumentNullException>(
+            () => new CultivationSystem(Roots, Realms, null!, "grade_false", null, "qi_refining", 1));
+    }
+
+    [Fact]
+    public void 新档_修为从零起()
+    {
+        // 起点是构造出来的，不是练出来的：新档不该凭空带着一层进度
+        Assert.Equal(0, NewSystem().Cultivation);
+        Assert.Equal(0, NewSystem(stage: 7).Cultivation);
     }
 
     // ── §8.2 三条游戏绑定的解锁判定 ───────────────────────────────────
@@ -170,7 +182,8 @@ public class CultivationSystemTests
         CultivationSystem system = NewSystem();
 
         Assert.Equal("cultivation", system.SaveKey);
-        Assert.Equal(1, system.Version);
+        // 2：M3-2 加了「修为」一列，旧档的读法见 ReadCultivation（Version 1 缺这一列时读成 0）
+        Assert.Equal(2, system.Version);
     }
 
     [Fact]
@@ -188,6 +201,85 @@ public class CultivationSystemTests
         Assert.Equal("golden_core", loaded.Realm.Id);
         Assert.Equal(3, loaded.Stage);
         Assert.Equal("后期", loaded.Realm.StageName(3));
+    }
+
+    [Fact]
+    public void 存档往返_修为原样读回()
+    {
+        // 修为是「练出来的」，没有第二个来源算得出来——读不回来就是白练。读档方用另一个起点构造，
+        // 证明读回的是存档里的数而不是恰好相同的初始值
+        CultivationSystem saved = NewSystem("grade_true_dual", realmId: "qi_refining", stage: 3);
+        saved.Meditate(new GameTime(1, Season.Spring, 1, 6, 0), 60);   // 1.0x × 春 1.10 = 11 点
+
+        CultivationSystem loaded = NewSystem("grade_innate", rootId: "root_star", realmId: "qi_refining", stage: 9);
+        loaded.Deserialize(saved.Serialize(), saved.Version);
+
+        Assert.Equal(11, saved.Cultivation);
+        Assert.Equal(3, loaded.Stage);
+        Assert.Equal(11, loaded.Cultivation);
+    }
+
+    [Fact]
+    public void 旧档_Version1_没有修为字段_读成零并保留灵根与境界()
+    {
+        // M3-1 写下的 blob：那一版既没有修为这一列，也没有攒修为的入口（M3-1 刻意不建这些字段）。
+        // 读成 0 是**迁移决定**，不是猜着读：那份存档里的玩家确实一点修为都没攒过，
+        // 而修为的初值本来就该是 0。下一条用例是它的配对——**同样的缺席在 Version 2 里必须抛**，
+        // 分界线是 fromVersion，不是「字段缺了就当 0」。
+        const string version1 = """
+            { "GradeId": "grade_mutation", "RootId": "root_ice", "RealmId": "qi_refining", "Stage": 6 }
+            """;
+
+        CultivationSystem loaded = NewSystem();
+        loaded.Deserialize(version1, fromVersion: 1);
+
+        Assert.Equal("grade_mutation", loaded.Grade.Id);
+        Assert.Equal("root_ice", loaded.Root!.Id);
+        Assert.Equal(6, loaded.Stage);
+        Assert.Equal(0, loaded.Cultivation);
+    }
+
+    [Fact]
+    public void 坏档_Version2_缺修为字段_当场抛()
+    {
+        // 本版本自己写出去的 blob 一定带着 cultivation：缺了说明这份数据不是本系统写的
+        // （被人改过、或写到一半崩了）。这里若也读成 0，就等于把坏档悄悄当成「没练过」
+        const string noCultivation = """
+            { "GradeId": "grade_false", "RootId": null, "RealmId": "qi_refining", "Stage": 1 }
+            """;
+
+        InvalidDataException exception =
+            Assert.Throws<InvalidDataException>(() => NewSystem().Deserialize(noCultivation, fromVersion: 2));
+
+        Assert.Contains("cultivation", exception.Message, StringComparison.Ordinal);
+    }
+
+    [Theory]
+    // 负的修为：凭空倒扣，且会让升层判定永远不动
+    [InlineData("""{ "GradeId": "grade_false", "RootId": null, "RealmId": "qi_refining", "Stage": 1, "Cultivation": -1 }""")]
+    // 一层攒到 10 点：那是「该升二层」的账，不存在「停在一层还继续攒」的状态
+    [InlineData("""{ "GradeId": "grade_false", "RootId": null, "RealmId": "qi_refining", "Stage": 1, "Cultivation": 10 }""")]
+    // 十三层是顶点：没有「下一层」，修为只能是 0
+    [InlineData("""{ "GradeId": "grade_false", "RootId": null, "RealmId": "qi_refining", "Stage": 13, "Cultivation": 1 }""")]
+    // 筑基期不攒修为：升层开销表只覆盖炼气期（§8.4 的突破要丹药，不是攒够就升）
+    [InlineData("""{ "GradeId": "grade_true_dual", "RootId": null, "RealmId": "foundation_establishment", "Stage": 1, "Cultivation": 5 }""")]
+    public void 坏存档_修为不在本层该有的范围里_当场抛(string json)
+    {
+        Assert.Throws<InvalidDataException>(() => NewSystem().Deserialize(json, fromVersion: 2));
+    }
+
+    [Fact]
+    public void 合法边界_差一点攒够是能读的()
+    {
+        // 上一条 theory 的另一半：判据是「>= 开销才算坏档」，差 1 点是合法状态——
+        // 写成 > 的话，每个刚好攒够一层的档都会被当成坏档
+        CultivationSystem loaded = NewSystem();
+        loaded.Deserialize(
+            """{ "GradeId": "grade_false", "RootId": null, "RealmId": "qi_refining", "Stage": 1, "Cultivation": 9 }""",
+            fromVersion: 2);
+
+        Assert.Equal(9, loaded.Cultivation);
+        Assert.Equal(1, loaded.Stage);
     }
 
     [Fact]
@@ -234,24 +326,28 @@ public class CultivationSystemTests
     [Fact]
     public void 坏存档被拒后_原来的状态还在()
     {
-        // 校验没过就一个字段都不该动——「读了一半」会让玩家掉进一个从没存在过的境界组合
+        // 校验没过就一个字段都不该动——「读了一半」会让玩家掉进一个从没存在过的境界组合，
+        // 而修为是练出来的：少一个点，玩家就是白坐了那一炷香
         CultivationSystem system = NewSystem("grade_true_dual", realmId: "qi_refining", stage: 5);
+        system.Meditate(new GameTime(1, Season.Spring, 1, 6, 0), 60);
 
         Assert.Throws<InvalidDataException>(
-            () => system.Deserialize("""{ "GradeId": "grade_nope", "RealmId": "qi_refining", "Stage": 1 }""", 1));
+            () => system.Deserialize("""{ "GradeId": "grade_nope", "RealmId": "qi_refining", "Stage": 1 }""", 2));
 
         Assert.Equal("grade_true_dual", system.Grade.Id);
         Assert.Equal("qi_refining", system.Realm.Id);
         Assert.Equal(5, system.Stage);
+        Assert.Equal(11, system.Cultivation);
     }
 
     [Fact]
     public void 存档版本过高_抛_NotSupportedException()
     {
-        // 来自更新版本的存档不能猜着读（ADR-009）
+        // 来自更新版本的存档不能猜着读（ADR-009）。当前 Version 是 2，所以拿 3 来试——
+        // 写 2 的话这条会变成「刚好等于当前版本也不许读」，与上一条迁移用例直接矛盾
         Assert.Throws<NotSupportedException>(
             () => NewSystem().Deserialize(
                 """{ "GradeId": "grade_false", "RootId": null, "RealmId": "qi_refining", "Stage": 1 }""",
-                fromVersion: 2));
+                fromVersion: 3));
     }
 }

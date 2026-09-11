@@ -1,0 +1,16 @@
+{
+  "_comment": "打坐的账：基础速度 + 逐层开销 + §8.3 里已经接得上的两个倍率。两组数的来源**不同，别混**：① seasonMultipliers 与 hourBands 是 §8.3 修炼速度体系**直给**的（docs/public/design.md 817-818 行：春季 +10%、夏季 +5%、秋季 +10%、冬季 -10%；子时（23:00-1:00）+30%、午时（11:00-13:00）+20%），文档给的是加成的百分数，这里落成倍率（+10% ⇒ 1.10，同 SpiritRootGrade.CultivationSpeedMultiplier 的写法，免得每个读表的人都在脑子里换算一次）；② basePointsPerHour 与 stageCosts 是 ARCHITECTURE.md 备案 #67/#68 **推导**出来的，设计文档没有直接给这两个数——推导逻辑：§8.1 把炼气期锚在「第 1 年春季」、§3.2 每季 28 天、§3.1 清晨 6:00-9:00 打坐，加上 §4.2 的灵根倍率两头夹出基数。stageCosts 的第 n 条 = 从炼气 n 层升到 n+1 层所需修为（= 10 × n），共 12 条：一层走到十三层正好 12 步，累计 780；真灵根双灵根（§4.2 的 1.0x）按每天打坐 3 小时是 78 小时，一个春季（28 天 × 3 小时 = 84 小时）之内走完，对上 §8.1 的进度锚点。costRealmId 只录炼气期：§8.1 说炼气「按 1-13 层逐层递进」，而筑基及以后的晋升是 §8.4 的**跨大境界突破**（要丹药 / 天材地宝），不是攒修为，所以没有第二段曲线。§8.3 表里另外七个因素（灵脉等级 / 聚灵阵 / 风水 / 功法品阶 / 丹药 / 心境 / 双修）**刻意不录**：各自的系统还不存在，先建字段就是建一批没人读的数，见 tests/M3Audit_Cultivation.cs 的反射钉子。",
+  "basePointsPerHour": 10,
+  "costRealmId": "qi_refining",
+  "stageCosts": [10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120],
+  "seasonMultipliers": [
+    { "season": "Spring", "multiplier": 1.10 },
+    { "season": "Summer", "multiplier": 1.05 },
+    { "season": "Autumn", "multiplier": 1.10 },
+    { "season": "Winter", "multiplier": 0.90 }
+  ],
+  "hourBands": [
+    { "name": "子时", "fromHour": 23, "toHour": 1,  "multiplier": 1.30 },
+    { "name": "午时", "fromHour": 11, "toHour": 13, "multiplier": 1.20 }
+  ]
+}
