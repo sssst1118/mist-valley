@@ -1,0 +1,104 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://ui/MinePanel.cs" id="1_minepanel"]
+
+[node name="MinePanel" type="Control"]
+process_mode = 3
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 0.0
+offset_bottom = 0.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+script = ExtResource("1_minepanel")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.06, 0.05, 0.04, 0.85)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Content" type="VBoxContainer" parent="Center"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="TitleLabel" type="Label" parent="Center/Content"]
+layout_mode = 2
+text = "矿洞"
+horizontal_alignment = 1
+
+[node name="MonsterList" type="VBoxContainer" parent="Center/Content"]
+layout_mode = 2
+theme_override_constants/separation = 2
+
+[node name="EncounterLabel" type="Label" parent="Center/Content"]
+layout_mode = 2
+horizontal_alignment = 1
+
+[node name="ResultLabel" type="Label" parent="Center/Content"]
+layout_mode = 2
+horizontal_alignment = 1
+
+[node name="NavLabel" type="Label" parent="Center/Content"]
+layout_mode = 2
+horizontal_alignment = 1
+
+[node name="ButtonRow" type="HBoxContainer" parent="Center/Content"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="EncounterButton" type="Button" parent="Center/Content/ButtonRow"]
+layout_mode = 2
+text = "遇敌"
+
+[node name="FightButton" type="Button" parent="Center/Content/ButtonRow"]
+layout_mode = 2
+disabled = true
+text = "开打"
+
+[node name="MoveRow" type="HBoxContainer" parent="Center/Content"]
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="DescendButton" type="Button" parent="Center/Content/MoveRow"]
+layout_mode = 2
+text = "下探一层"
+
+[node name="SurfaceButton" type="Button" parent="Center/Content/MoveRow"]
+layout_mode = 2
+text = "回地面"
+
+[node name="EnterButton" type="Button" parent="Center/Content/MoveRow"]
+layout_mode = 2
+visible = false
+text = "下矿"
+
+[node name="ElevatorGrid" type="GridContainer" parent="Center/Content"]
+layout_mode = 2
+theme_override_constants/h_separation = 6
+theme_override_constants/v_separation = 6
+columns = 6
+
+[node name="HintLabel" type="Label" parent="Center/Content"]
+layout_mode = 2
+text = "[Esc] 关闭"
+horizontal_alignment = 1

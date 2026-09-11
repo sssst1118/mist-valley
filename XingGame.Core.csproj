@@ -25,6 +25,7 @@
     <Compile Remove="mods/**" />
     <Compile Remove="tests/**" />
     <Compile Remove=".godot/**" />
+    <Compile Remove=".claude/**" />
   </ItemGroup>
 
   <!--

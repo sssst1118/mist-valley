@@ -39,4 +39,13 @@
     <Compile Remove=".godot/**" />
   </ItemGroup>
 
+  <!--
+    .claude/ 下会放 git worktree（并行开发时每个 agent 一棵）。它们是**另外的检出**，
+    里面的 ui/ world/ 同样匹配本工程的 **/*.cs 通配符，不排除就会把同一批类编两遍（CS0101）。
+    .gitignore 拦不住这个——MSBuild 不认识 .gitignore。
+  -->
+  <ItemGroup>
+    <Compile Remove=".claude/**" />
+  </ItemGroup>
+
 </Project>

@@ -29,6 +29,9 @@ obj/
 *.so
 *.dylib
 
+# ==== Claude Code（.claude/worktrees/ 下是并行开发用的临时 git worktree）====
+.claude/
+
 # ==== 编辑器与系统 ====
 .vscode/*
 !.vscode/settings.json

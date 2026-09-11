@@ -21,8 +21,13 @@ namespace XingGame.Ui;
 /// 而不是直接关，不必改宿主。
 /// </para>
 /// <para>
-/// <b>面板自己再动一次暂停也不会打架</b>：关闭时先 <c>RemoveChild</c>（面板的 <c>_ExitTree</c> 在这一刻
-/// 同步跑完，它若把暂停写回 true 也认），宿主随后才恢复——顺序反过来，被盖掉的就是宿主，树会永远冻着。
+/// <b>面板一律不许碰暂停开关</b>（M2-C 契约的一部分）：<c>GetTree().Paused</c> 与 <c>ITimeService.IsPaused</c>
+/// 都归宿主。<c>tests/BridgeContractTests.cs</c> 扫源码钉着这一条，别去绕。
+/// </para>
+/// <para>
+/// <b>即便如此，关闭顺序仍是「先摘、再删、最后恢复」</b>：<c>RemoveChild</c> 会同步跑完面板的
+/// <c>_ExitTree</c>，万一有面板在里面写了暂停，也会被随后这次恢复盖掉——恢复权始终在宿主手里。
+/// 顺序反过来，被盖掉的就是宿主，树会永远冻着。（这是顺序本身的理由，不是给面板写暂停的许可。）
 /// </para>
 /// <para>
 /// <b>代价是 <see cref="CloseAll"/> 一返回，面板就已经不在树里了</b>：<c>GetViewport()</c> / <c>GetTree()</c>

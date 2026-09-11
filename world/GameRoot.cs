@@ -57,8 +57,8 @@ public partial class GameRoot : Node
     /// </summary>
     private double _pendingMinutes;
 
-    /// <summary>种子决定天气序列，随存档走（ARCHITECTURE 未定义项备案 #8）。留着是为了自动保存时原样写回 meta。</summary>
-    private int _worldSeed;
+    // 世界种子原先是这里的私有实例字段。改成下面的静态属性是为了让桥接层取得到它——它同时也是
+    // 「同一个事实只存一处」的直接落实：写回 meta 与面板掷随机读的是同一份。
 
     /// <summary>持有具体类型才能读到 Config —— 流速是桥接层做现实/游戏换算的依据。</summary>
     private TimeService _time = null!;
@@ -82,6 +82,18 @@ public partial class GameRoot : Node
 
     /// <summary>其他桥接节点的取服务入口。</summary>
     public static IServiceRegistry Services { get; private set; } = null!;
+
+    /// <summary>
+    /// 本存档的世界种子：决定天气序列（未定义项备案 #8），也是桥接层掷随机的基准——
+    /// 钓鱼的竿、掷怪都拿它起头。
+    /// </summary>
+    /// <remarks>
+    /// <b>为什么在组合根上、而不是某个系统上</b>：种子是「这个世界」的身份，随存档走，
+    /// 不属于任何单个系统；<c>TimeService</c> 拿它只为一个用途（排天气），且刻意不把它存进 blob
+    /// （见其类注释），所以从那边取等于借道。系统侧一律仍由<b>调用方把种子传进去</b>——
+    /// 它们保持纯函数，测试才能靠「同参同果」。
+    /// </remarks>
+    public static int WorldSeed { get; private set; }
 
     public override void _Ready()
     {
@@ -180,7 +192,7 @@ public partial class GameRoot : Node
         services.Register<IAnimalTable>(animals);
         services.Register<IRecipeTable>(recipes);
 
-        _worldSeed = worldSeed;
+        WorldSeed = worldSeed;
         _time = time;
         _saves = saves;
         _farming = farming;
@@ -196,7 +208,7 @@ public partial class GameRoot : Node
         };
         if (saves.Load(SaveSlot, _saveables))
         {
-            GD.Print($"[存档] 已读档 slot {SaveSlot}：世界种子 {_worldSeed}，{GameTimeText(time.Now)}");
+            GD.Print($"[存档] 已读档 slot {SaveSlot}：世界种子 {WorldSeed}，{GameTimeText(time.Now)}");
         }
         else
         {
@@ -276,7 +288,7 @@ public partial class GameRoot : Node
         if (left > 0) GD.PushError($"[新档] 初始资源 {itemId} 有 {left} 个没装下");
     }
 
-    private SaveMeta BuildMeta() => new(_worldSeed, DefaultFarmName, GameTimeText(_time.Now));
+    private SaveMeta BuildMeta() => new(WorldSeed, DefaultFarmName, GameTimeText(_time.Now));
 
     /// <summary>
     /// 存档列表要显示的时间文本（§16.1）。季节名译法与 <c>ui/TimeHud</c> 重复了一处，

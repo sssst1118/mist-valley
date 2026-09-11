@@ -1,0 +1,10 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://world/Interactable.cs" id="1_interactable"]
+[ext_resource type="PackedScene" path="res://ui/CraftingPanel.tscn" id="2_craftpanel"]
+
+[node name="CraftingSpot" type="Node2D"]
+script = ExtResource("1_interactable")
+Radius = 60.0
+Prompt = "加工与烹饪"
+PanelScene = ExtResource("2_craftpanel")

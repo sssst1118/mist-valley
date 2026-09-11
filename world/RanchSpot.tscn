@@ -1,0 +1,10 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://world/Interactable.cs" id="1_interactable"]
+[ext_resource type="PackedScene" path="res://ui/RanchPanel.tscn" id="2_ranchpanel"]
+
+[node name="RanchSpot" type="Node2D"]
+script = ExtResource("1_interactable")
+Radius = 60.0
+Prompt = "照看牧场"
+PanelScene = ExtResource("2_ranchpanel")

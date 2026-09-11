@@ -1,0 +1,10 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://world/Interactable.cs" id="1_interactable"]
+[ext_resource type="PackedScene" path="res://ui/DialoguePanel.tscn" id="2_dialoguepanel"]
+
+[node name="NpcSpot" type="Node2D"]
+script = ExtResource("1_interactable")
+Radius = 60.0
+Prompt = "交谈"
+PanelScene = ExtResource("2_dialoguepanel")

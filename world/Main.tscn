@@ -1,4 +1,4 @@
-[gd_scene load_steps=12 format=3]
+[gd_scene load_steps=18 format=3]
 
 [ext_resource type="PackedScene" path="res://ui/TimeHud.tscn" id="1_timehud"]
 [ext_resource type="PackedScene" path="res://world/Player.tscn" id="2_player"]
@@ -9,6 +9,12 @@
 [ext_resource type="PackedScene" path="res://world/FarmView.tscn" id="7_farmview"]
 [ext_resource type="PackedScene" path="res://ui/ToolbarHud.tscn" id="8_toolbarhud"]
 [ext_resource type="PackedScene" path="res://ui/PanelHost.tscn" id="9_panelhost"]
+[ext_resource type="PackedScene" path="res://world/ShopSpot.tscn" id="10_shopspot"]
+[ext_resource type="PackedScene" path="res://world/NpcSpot.tscn" id="11_npcspot"]
+[ext_resource type="PackedScene" path="res://world/FishingSpot.tscn" id="12_fishingspot"]
+[ext_resource type="PackedScene" path="res://world/RanchSpot.tscn" id="13_ranchspot"]
+[ext_resource type="PackedScene" path="res://world/MineSpot.tscn" id="14_minespot"]
+[ext_resource type="PackedScene" path="res://world/CraftingSpot.tscn" id="15_craftingspot"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_wall_h"]
 size = Vector2(1640, 20)
@@ -63,6 +69,24 @@ script = ExtResource("3_interactable")
 Radius = 60.0
 CanInteract = false
 Prompt = "开采灵脉"
+
+[node name="MineSpot" parent="." instance=ExtResource("14_minespot")]
+position = Vector2(0, -340)
+
+[node name="NpcSpot" parent="." instance=ExtResource("11_npcspot")]
+position = Vector2(-294, -170)
+
+[node name="ShopSpot" parent="." instance=ExtResource("10_shopspot")]
+position = Vector2(294, -170)
+
+[node name="RanchSpot" parent="." instance=ExtResource("13_ranchspot")]
+position = Vector2(-294, 170)
+
+[node name="CraftingSpot" parent="." instance=ExtResource("15_craftingspot")]
+position = Vector2(294, 170)
+
+[node name="FishingSpot" parent="." instance=ExtResource("12_fishingspot")]
+position = Vector2(0, 340)
 
 [node name="Hud" type="CanvasLayer" parent="."]
 
