@@ -1,0 +1,43 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://ui/ToolbarHud.cs" id="1_toolbarhud"]
+
+[node name="ToolbarHud" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_toolbarhud")
+
+[node name="Layout" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -1104.0
+offset_top = -106.0
+offset_right = -16.0
+offset_bottom = -16.0
+grow_horizontal = 0
+grow_vertical = 0
+theme_override_constants/separation = 6
+alignment = 2
+
+[node name="ToolLabel" type="Label" parent="Layout"]
+layout_mode = 2
+horizontal_alignment = 2
+text = "当前工具：空手"
+
+[node name="SlotRow" type="HBoxContainer" parent="Layout"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="HintLabel" type="Label" parent="Layout"]
+layout_mode = 2
+horizontal_alignment = 2
+text = "[空格] 使用  [1-9] 切换"

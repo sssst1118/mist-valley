@@ -76,6 +76,44 @@ public sealed class FarmingSystem : IDisposable
         return true;
     }
 
+    /// <summary>锄头。UI 与桥接层拿它做显示，规则只在本类里用一次。</summary>
+    /// <remarks>
+    /// <b>M2 做工具升级 / 更多工具时</b>改为在物品表里加一个「工具种类」字段再查——现在为两个 id
+    /// 加一个字段是过度设计：斧头、镐子、镰刀都还没有任何行为。
+    /// </remarks>
+    public const string HoeItemId = "tool_hoe";
+
+    /// <summary>洒水壶。</summary>
+    public const string WateringCanItemId = "tool_watering_can";
+
+    /// <summary>
+    /// 用选中的物品作用于目标格。
+    /// </summary>
+    /// <param name="selected">手上拿的东西；空手为 null。</param>
+    /// <remarks>
+    /// <para>
+    /// 这是<b>种植领域的规则</b>，所以住在这里而不是桥接层：桥接层里的规则逃过了编译器的看管
+    /// （ADR-007），而这里能被单元测试逐条钉住。
+    /// </para>
+    /// <para>
+    /// <b>成熟作物优先收获，且任何手持物都能收</b>——玩家不该因为忘了换工具，
+    /// 站在熟透的地里干瞪眼。
+    /// </para>
+    /// </remarks>
+    public bool UseOn(TileCoord tile, ItemDefinition? selected)
+    {
+        // 先看成熟：换工具是玩家的动作，而作物熟没熟是既成事实，不该被手持物挡住
+        if (_farmland.IsReadyToHarvest(tile)) return TryHarvest(tile);
+
+        if (selected is null) return false;
+
+        if (selected.Id == HoeItemId) return _farmland.TryTill(tile);
+        if (selected.Id == WateringCanItemId) return _farmland.TryWater(tile);
+        if (selected.Category == ItemCategory.Seed) return TryPlant(tile, selected.Id);
+
+        return false;
+    }
+
     /// <summary>退订全部订阅。</summary>
     public void Dispose()
     {

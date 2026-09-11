@@ -30,6 +30,12 @@
     { "id": "material_copper_ingot",        "name": "铜锭",         "description": "由铜矿冶炼而成，制作设备与建筑的材料。",            "category": "Material", "maxStack": 999, "buyPrice": 0,   "sellPrice": 0 },
     { "id": "material_iron_ingot",          "name": "铁锭",         "description": "由铁矿冶炼而成，制作设备与建筑的材料。",            "category": "Material", "maxStack": 999, "buyPrice": 0,   "sellPrice": 0 },
     { "id": "material_spirit_spring_water", "name": "灵泉水",       "description": "炼丹与烹饪灵食的材料。",                            "category": "Material", "maxStack": 999, "buyPrice": 0,   "sellPrice": 0 },
-    { "id": "material_spirit_stone",        "name": "灵石",         "description": "修仙材料，用于建造阵法与宗门设施。",                "category": "Material", "maxStack": 999, "buyPrice": 0,   "sellPrice": 0 }
+    { "id": "material_spirit_stone",        "name": "灵石",         "description": "修仙材料，用于建造阵法与宗门设施。",                "category": "Material", "maxStack": 999, "buyPrice": 0,   "sellPrice": 0 },
+
+    { "id": "tool_hoe",                     "name": "锄头",         "description": "开垦耕地。",                                        "category": "Tool",     "maxStack": 1,   "buyPrice": 0,   "sellPrice": 0 },
+    { "id": "tool_watering_can",            "name": "洒水壶",       "description": "给耕地浇水。",                                      "category": "Tool",     "maxStack": 1,   "buyPrice": 0,   "sellPrice": 0 },
+    { "id": "tool_axe",                     "name": "斧头",         "description": "砍树。",                                            "category": "Tool",     "maxStack": 1,   "buyPrice": 0,   "sellPrice": 0 },
+    { "id": "tool_pickaxe",                 "name": "镐子",         "description": "采矿。",                                            "category": "Tool",     "maxStack": 1,   "buyPrice": 0,   "sellPrice": 0 },
+    { "id": "tool_sickle",                  "name": "镰刀",         "description": "初始工具之一；具体用途待补。",                      "category": "Tool",     "maxStack": 1,   "buyPrice": 0,   "sellPrice": 0 }
   ]
 }

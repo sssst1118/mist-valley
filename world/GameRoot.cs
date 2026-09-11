@@ -4,6 +4,7 @@ using XingGame.Core;
 using XingGame.Core.Events;
 using XingGame.Core.Save;
 using XingGame.Core.Time;
+using XingGame.Systems.Farming;
 using XingGame.Systems.Interaction;
 using XingGame.Systems.Items;
 
@@ -23,6 +24,18 @@ public partial class GameRoot : Node
     /// <summary>§16.1 的农场名 M1 尚无命名入口，先占位；M1-6 起由玩家输入。</summary>
     private const string DefaultFarmName = "未命名农场";
 
+    /// <summary>§4.6 初始工具：锄头、洒水壶、斧头、镐子、镰刀。</summary>
+    private static readonly string[] StartingToolIds =
+    {
+        "tool_hoe", "tool_watering_can", "tool_axe", "tool_pickaxe", "tool_sickle",
+    };
+
+    /// <summary>§4.6 初始种子：防风草 ×15。</summary>
+    private const string StartingSeedId = "seed_parsnip";
+
+    /// <summary>§4.6 初始种子数量。</summary>
+    private const int StartingSeedCount = 15;
+
     /// <summary>
     /// 攒下的零头分钟。每帧增量是小数（10 分/秒 ÷ 60fps ≈ 0.167）而 Advance 只收 int，
     /// 不留余数就只能一直 Advance(0)，时间永远不走。
@@ -36,6 +49,9 @@ public partial class GameRoot : Node
     private TimeService _time = null!;
 
     private ISaveService _saves = null!;
+
+    /// <summary>留一份引用只为了在 <c>_ExitTree</c> 里退掉它的订阅（ADR-005：不留无主订阅）。</summary>
+    private FarmingSystem _farming = null!;
 
     /// <summary>
     /// 本存档位要写的系统清单，读档与写档**共用同一份**。不能各写各的：<c>SqliteSaveService.Save</c>
@@ -59,6 +75,10 @@ public partial class GameRoot : Node
         var items = ItemTable.LoadDefault();
         var inventory = new Inventory(items, Inventory.DefaultSlotCount);
 
+        // 作物表额外拿物品表交叉校验两张表对不对得上（ADR-013）：作物表自己的测试发现不了这件事
+        var crops = CropTable.LoadDefault(items);
+        var farmland = new Farmland(crops);
+
         // core/ 是纯 C#，解析不了 user:// —— 存档目录由桥接层换算后注入（ADR-009）
         var saves = new SqliteSaveService(ProjectSettings.GlobalizePath("user://saves"));
 
@@ -68,6 +88,10 @@ public partial class GameRoot : Node
             worldSeed = NewWorldSeed();
 
         var time = new TimeService(bus, weatherGenerator, worldSeed: worldSeed);
+
+        // 种植系统要天气（下雨自动浇水，§3.3），所以它排在 TimeService 之后。
+        // 构造即订阅 DayStarted / SeasonChanged，Dispose 即退订——不留无主订阅（ADR-005）。
+        var farming = new FarmingSystem(bus, time, crops, farmland, inventory);
 
         // 键是声明的类型参数：这里注册接口，取用方也只能按接口取（ServiceRegistry 的约定）。
         // 先注册再接存档：反序列化期间若某个可存档系统要取服务，注册表已经就绪。
@@ -79,6 +103,10 @@ public partial class GameRoot : Node
 
         services.Register<IInventory>(inventory);
 
+        // 耕地与种植没有接口可注册（M1-5 的契约是具体类，ADR-014），桥接层按具体类型取。
+        services.Register<Farmland>(farmland);
+        services.Register<FarmingSystem>(farming);
+
         // 交互系统由本类构造（ADR-007：全游戏只在这里 new 具体实现）。
         // 桥接层的 Interactable 与 InteractPrompt 都必须拿到同一个实例，否则提示永远找不到目标。
         services.Register<IInteractionSystem>(new InteractionSystem());
@@ -86,13 +114,21 @@ public partial class GameRoot : Node
         _worldSeed = worldSeed;
         _time = time;
         _saves = saves;
+        _farming = farming;
         Services = services;
 
-        _saveables = new ISaveable[] { time, inventory };
+        _saveables = new ISaveable[] { time, inventory, farmland };
         if (saves.Load(SaveSlot, _saveables))
+        {
             GD.Print($"[存档] 已读档 slot {SaveSlot}：世界种子 {_worldSeed}，{GameTimeText(time.Now)}");
+        }
         else
+        {
+            // 只有「这个存档位本地不存在」才算新档。不用「背包是空的就发」这类判据：
+            // 玩家把背包清空一次就会白拿一份工具，而且他永远不知道自己触发了什么。
+            GrantStartingResources(inventory);
             SaveState("新档");   // 新游戏：初始状态立刻落盘，下次启动就走读档那条路
+        }
 
         // §16.2「每日结束时自动保存」。日界在 6:00，跨入即意味着前一天结束（ARCHITECTURE「日界与事件时序」）
         _dayStartedSubscription = bus.Subscribe<DayStarted>(_ => SaveState("自动保存"));
@@ -100,9 +136,13 @@ public partial class GameRoot : Node
 
     /// <summary>
     /// GameRoot 是 autoload，正常不会离树；留着退订是为了不在总线上留无主订阅——
-    /// 编辑器里重载程序集时，无主订阅会去碰已经死掉的对象。
+    /// 编辑器里重载程序集时，无主订阅会去碰已经死掉的对象。种植系统持有两个订阅，同理。
     /// </summary>
-    public override void _ExitTree() => _dayStartedSubscription?.Dispose();
+    public override void _ExitTree()
+    {
+        _dayStartedSubscription?.Dispose();
+        _farming?.Dispose();
+    }
 
     public override void _Process(double delta)
     {
@@ -130,6 +170,26 @@ public partial class GameRoot : Node
         {
             GD.PushError($"[存档] {reason}写入 slot {SaveSlot} 失败：{exception.Message}");
         }
+    }
+
+    /// <summary>
+    /// §4.6 初始资源里 M1 能落地的那部分：五件工具 + 防风草种子 ×15。
+    /// 金币 / 灵石 / 房屋 / 宠物 / 灵根要等各自的系统（M2 经济、M3 灵根），现在不实现（铁律 3）。
+    /// </summary>
+    private static void GrantStartingResources(IInventory inventory)
+    {
+        foreach (string toolId in StartingToolIds) Grant(inventory, toolId, 1);
+        Grant(inventory, StartingSeedId, StartingSeedCount);
+    }
+
+    /// <summary>
+    /// 装不下只报错、不回滚（<c>Add</c> 的约定）：24 格 × 999 上限下这是理论边界，
+    /// 真发生了说明背包被改小了——玩家手上少一件工具是看得见的症状，比静默吞掉强。
+    /// </summary>
+    private static void Grant(IInventory inventory, string itemId, int count)
+    {
+        int left = inventory.Add(itemId, count);
+        if (left > 0) GD.PushError($"[新档] 初始资源 {itemId} 有 {left} 个没装下");
     }
 
     private SaveMeta BuildMeta() => new(_worldSeed, DefaultFarmName, GameTimeText(_time.Now));

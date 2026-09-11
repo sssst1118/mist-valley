@@ -194,6 +194,9 @@ public class ItemTableTests
 
             "material_wood", "material_coal", "material_copper_ore", "material_copper_ingot",
             "material_iron_ingot", "material_spirit_spring_water", "material_spirit_stone",
+
+            // §4.6「初始资源」列的五种开局工具——全部在文档里，不是我们造的
+            "tool_hoe", "tool_watering_can", "tool_axe", "tool_pickaxe", "tool_sickle",
         };
 
         ItemTable table = ItemTable.LoadDefault();
@@ -205,6 +208,7 @@ public class ItemTableTests
         Assert.Equal(11, table.All.Count(item => item.Category == ItemCategory.Crop));
         Assert.Equal(11, table.All.Count(item => item.Category == ItemCategory.Seed));
         Assert.Equal(7, table.All.Count(item => item.Category == ItemCategory.Material));
+        Assert.Equal(5, table.All.Count(item => item.Category == ItemCategory.Tool));
     }
 
     [Theory]
@@ -261,9 +265,16 @@ public class ItemTableTests
     }
 
     [Fact]
-    public void 缺省数据文件_当前全是可堆叠物品_上限_999()
+    public void 缺省数据文件_可堆叠物品上限_999_工具为_1()
     {
-        // 设计文档里还没有出现过具体的工具条目，所以「工具类 maxStack = 1」暂时没有适用对象
-        Assert.All(ItemTable.LoadDefault().All, item => Assert.Equal(999, item.MaxStack));
+        ItemTable table = ItemTable.LoadDefault();
+
+        // 工具不可堆叠：一格放两把锄头没有意义，而且「当前工具」要占得住一格（§17.1 的快捷栏）
+        Assert.All(table.All.Where(item => item.Category == ItemCategory.Tool),
+                   item => Assert.Equal(1, item.MaxStack));
+
+        // 其余（作物 / 种子 / 材料）都可堆叠
+        Assert.All(table.All.Where(item => item.Category != ItemCategory.Tool),
+                   item => Assert.Equal(999, item.MaxStack));
     }
 }

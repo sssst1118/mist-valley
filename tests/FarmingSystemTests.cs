@@ -23,7 +23,10 @@ public class FarmingSystemTests
         { "id": "seed_parsnip",    "name": "防风草种子", "description": "春季播种。", "category": "Seed", "maxStack": 999, "buyPrice": 20, "sellPrice": 0 },
         { "id": "crop_parsnip",    "name": "防风草",     "description": "春季作物。", "category": "Crop", "maxStack": 999, "buyPrice": 0,  "sellPrice": 35 },
         { "id": "seed_strawberry", "name": "草莓种子",   "description": "春季播种。", "category": "Seed", "maxStack": 999, "buyPrice": 100, "sellPrice": 0 },
-        { "id": "crop_strawberry", "name": "草莓",       "description": "春季作物。", "category": "Crop", "maxStack": 999, "buyPrice": 0,  "sellPrice": 120 }
+        { "id": "crop_strawberry", "name": "草莓",       "description": "春季作物。", "category": "Crop", "maxStack": 999, "buyPrice": 0,  "sellPrice": 120 },
+
+        { "id": "tool_hoe",           "name": "锄头",   "description": "开垦耕地。", "category": "Tool", "maxStack": 1, "buyPrice": 0, "sellPrice": 0 },
+        { "id": "tool_watering_can",  "name": "洒水壶", "description": "给耕地浇水。", "category": "Tool", "maxStack": 1, "buyPrice": 0, "sellPrice": 0 }
       ]
     }
     """;
@@ -285,6 +288,97 @@ public class FarmingSystemTests
         Assert.Equal(2, harvests);
         Assert.Equal(2, _inventory.Count("crop_strawberry"));
         Assert.True(_farmland.HasCrop(Tile));   // 可多次收获的株还在，没被拔掉
+    }
+
+    // ——— UseOn：用选中的物品作用于目标格 ———
+    //
+    // 这条规则住在这里而不是桥接层（ADR-007）——桥接层里的规则逃过编译器的看管，
+    // 而下面每一条都能被逐条钉住。
+
+    [Fact]
+    public void UseOn_锄头开垦_未开垦的格变成已开垦()
+    {
+        using FarmingSystem system = NewSystem();
+
+        Assert.True(system.UseOn(Tile, Items.Get(FarmingSystem.HoeItemId)));
+        Assert.Equal(SoilState.Tilled, _farmland.StateOf(Tile));
+    }
+
+    [Fact]
+    public void UseOn_洒水壶浇水_荒地浇不了()
+    {
+        using FarmingSystem system = NewSystem();
+
+        Assert.False(system.UseOn(Tile, Items.Get(FarmingSystem.WateringCanItemId)));
+
+        _farmland.TryTill(Tile);
+
+        Assert.True(system.UseOn(Tile, Items.Get(FarmingSystem.WateringCanItemId)));
+        Assert.Equal(SoilState.Watered, _farmland.StateOf(Tile));
+    }
+
+    [Fact]
+    public void UseOn_种子播种_并扣掉一粒()
+    {
+        using FarmingSystem system = NewSystem();
+        _farmland.TryTill(Tile);
+        _inventory.Add(Parsnip, 2);
+
+        Assert.True(system.UseOn(Tile, Items.Get(Parsnip)));
+
+        Assert.True(_farmland.HasCrop(Tile));
+        Assert.Equal(1, _inventory.Count(Parsnip));
+    }
+
+    [Fact]
+    public void UseOn_空手_什么都不发生()
+    {
+        using FarmingSystem system = NewSystem();
+        _farmland.TryTill(Tile);
+        _inventory.Add(Parsnip, 1);
+
+        Assert.False(system.UseOn(Tile, null));
+
+        Assert.Equal(SoilState.Tilled, _farmland.StateOf(Tile));
+        Assert.False(_farmland.HasCrop(Tile));
+        Assert.Equal(1, _inventory.Count(Parsnip));
+    }
+
+    [Fact]
+    public void UseOn_拿非种子非工具的物品_返回_false()
+    {
+        using FarmingSystem system = NewSystem();
+        _farmland.TryTill(Tile);
+
+        Assert.False(system.UseOn(Tile, Items.Get("crop_parsnip")));
+
+        Assert.Equal(SoilState.Tilled, _farmland.StateOf(Tile));
+    }
+
+    [Fact]
+    public void UseOn_成熟时_手拿锄头也收得到_收获优先于工具()
+    {
+        using FarmingSystem system = NewSystem();
+        _farmland.TryTill(Tile);
+        _inventory.Add(Parsnip, 1);
+        Assert.True(system.TryPlant(Tile, Parsnip));
+
+        for (int day = 0; day < 4; day++)
+        {
+            _farmland.TryWater(Tile);
+            _bus.Publish(DayStartedOf(day + 2));
+        }
+
+        Assert.True(_farmland.IsReadyToHarvest(Tile));
+
+        // 契约：成熟作物优先收获，且任何手持物都能收——玩家不该因为忘了换工具干瞪眼
+        Assert.True(system.UseOn(Tile, Items.Get(FarmingSystem.HoeItemId)));
+
+        Assert.Equal(1, _inventory.Count("crop_parsnip"));
+        Assert.False(_farmland.HasCrop(Tile));
+
+        // 收获没有顺带把地也锄了或浇了：收完就是「已开垦」，不凭空多出一个免费天数
+        Assert.Equal(SoilState.Tilled, _farmland.StateOf(Tile));
     }
 
     // ——— 构造 ———
