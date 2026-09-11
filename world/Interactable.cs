@@ -1,5 +1,6 @@
 using Godot;
 using XingGame.Systems.Interaction;
+using XingGame.Ui;
 
 namespace XingGame.World;
 
@@ -28,6 +29,12 @@ public partial class Interactable : Node2D, IInteractable
     /// <summary>提示文案，如「浇水」。</summary>
     [Export] public string Prompt { get; set; } = "交互";
 
+    /// <summary>
+    /// 这个目标按 E 要开的面板（M2-C）。**留空就维持占位行为**——给还没做面板的东西留着，
+    /// 也免得六个模块没做完之前场景装配不起来。
+    /// </summary>
+    [Export] public PackedScene? PanelScene { get; set; }
+
     private bool _used;
 
     /// <summary>退订要用同一个实例，故缓存之——也免得离树时再去注册表绕一圈。</summary>
@@ -52,11 +59,21 @@ public partial class Interactable : Node2D, IInteractable
     string IInteractable.Prompt => Prompt;
 
     /// <summary>
-    /// 占位效果：换个颜色 + 打一行日志，只为证明「按下的 E 真的走到了这个目标身上」。
-    /// 浇水 / 采摘 / 开采是各系统在 M1-5 起的事——现在写任何玩法逻辑都会被推翻重来（铁律 3）。
+    /// 配了 <see cref="PanelScene"/> 就把开合整个转发给 <see cref="PanelHost"/>（哪个面板开着、
+    /// 暂停怎么算，都是宿主的事，这里一概不管——ADR-007）；没配则维持占位效果。
     /// </summary>
+    /// <remarks>
+    /// 占位效果是「换个颜色 + 打一行日志」，只为证明「按下的 E 真的走到了这个目标身上」。
+    /// 浇水 / 采摘 / 开采是各系统在 M1-5 起的事——现在写任何玩法逻辑都会被推翻重来（铁律 3）。
+    /// </remarks>
     void IInteractable.Interact()
     {
+        if (PanelScene is not null)
+        {
+            PanelHost.Instance.Toggle(PanelScene);
+            return;
+        }
+
         _used = !_used;
         GD.Print($"[交互] {Prompt}");
         QueueRedraw();

@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource type="PackedScene" path="res://ui/TimeHud.tscn" id="1_timehud"]
 [ext_resource type="PackedScene" path="res://world/Player.tscn" id="2_player"]
@@ -8,6 +8,7 @@
 [ext_resource type="PackedScene" path="res://ui/InventoryPanel.tscn" id="6_inventorypanel"]
 [ext_resource type="PackedScene" path="res://world/FarmView.tscn" id="7_farmview"]
 [ext_resource type="PackedScene" path="res://ui/ToolbarHud.tscn" id="8_toolbarhud"]
+[ext_resource type="PackedScene" path="res://ui/PanelHost.tscn" id="9_panelhost"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_wall_h"]
 size = Vector2(1640, 20)
@@ -76,3 +77,5 @@ PlayerPath = NodePath("../../Player")
 
 [node name="ToolbarHud" parent="Hud" instance=ExtResource("8_toolbarhud")]
 PlayerPath = NodePath("../../Player")
+
+[node name="PanelHost" parent="Hud" instance=ExtResource("9_panelhost")]
