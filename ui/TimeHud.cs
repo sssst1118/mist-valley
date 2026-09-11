@@ -26,7 +26,12 @@ public partial class TimeHud : Control
         _label = GetNode<Label>("TimeLabel");
 
         var bus = GameRoot.Services.Get<IEventBus>();
-        _subscriptions.Add(bus.Subscribe<HourChanged>(e => { _time = e.Time; Render(); }));
+
+        // ⚠️ 这里订的是 MinuteTicked 而不是 HourChanged：标签画的是「时:分」，而 HourChanged
+        // 一小时只发一次——订它的话时钟会整整一小时停在 06:00 不动，玩家会以为时间卡住了。
+        // （打坐这种一次推几小时的动作会让偏移更扎眼：结算完了世界已经 09:03，HUD 还写着 09:00。）
+        _subscriptions.Add(bus.Subscribe<MinuteTicked>(e => { _time = e.Time; Render(); }));
+
         _subscriptions.Add(bus.Subscribe<DayStarted>(e => { _time = e.Time; Render(); }));
         _subscriptions.Add(bus.Subscribe<SeasonChanged>(e => { _time = e.Time; Render(); }));
         _subscriptions.Add(bus.Subscribe<WeatherChanged>(e => { _weather = e.Current; Render(); }));

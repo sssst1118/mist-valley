@@ -213,6 +213,13 @@ public partial class GameRoot : Node
             spiritRoots, realms, cultivationSpeed, spiritPower, spiritLand, buffs,
             StartingGradeId, rootId: null, StartingRealmId, StartingStage);
 
+        // M3-8 打坐：§3.1 清晨那一项活动，把三笔账接在一处——修为（Meditate）、灵力（RecoverSpirit）、
+        // 时间（Advance）。**这个连接放在系统里而不是桥接层**（ADR-007）：「坐着入定一段时间 = 时间流逝
+        // + 修为增长」是一条玩法判断，打散到面板里就没人看得见它。它排在 cultivation 与 time 之后，
+        // 速度表则用来回答「这个大境界攒不攒修为」（筑基起是 §8.4 的突破，打坐只回灵力）。
+        // 同生活法术与灵气感知：不带状态、不订阅事件，既不进 _saveables、也没有 Dispose
+        var meditation = new MeditationSystem(cultivation, time, cultivationSpeed);
+
         // 生活法术要读玩家的层数（解锁）与灵力（消耗），还要改耕地，所以排在两者之后。
         // 它自己不带状态、也不订阅任何事件，所以既不进 _saveables、也没有 Dispose
         var lifeSpells = new LifeSpellSystem(spells, cultivation, farmland);
@@ -280,6 +287,10 @@ public partial class GameRoot : Node
         // 答不出「打坐一小时回几点」——那要读表才知道）
         services.Register<ISpiritPowerTable>(spiritPower);
         services.Register<ICultivationSystem>(cultivation);
+
+        // M3-8：打坐这一项活动的入口。桥接层只认它（面板按一次「打坐」就是这一次调用），
+        // 「时间要走多少、什么时候结算」都不在界面那一侧
+        services.Register<IMeditationSystem>(meditation);
 
         // M3-4：法术表要答「这条法术几层解锁、花多少、作用几格」，法术系统要答「现在放不放得出」。
         // 桥接层两个都要（快捷栏列法术读表，按键施放走系统），所以按接口各注册一份

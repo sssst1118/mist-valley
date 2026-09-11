@@ -111,7 +111,8 @@ public interface ICultivationSystem
     /// <b>打坐这一档刻意不并进 <see cref="Meditate"/>（不是漏做）</b>：两笔账的数据来源不同
     /// （修为走 §8.3 的速度表，灵力走备案 #71），而且筑基及以上的打坐**回气但不结修为**
     /// （那边升层要 §8.4 的丹药，<c>Meditate</c> 当场抛）——并进去就没法表达这个状态。
-    /// 所以桥接层做「打坐」这个动作时要调两个入口，各自传同一段时长。
+    /// 所以「调哪两个入口、按什么顺序」由 <c>IMeditationSystem</c>（M3-8）持有，面板只调它一次——
+    /// 面板里自己拼三笔账，正是 ADR-007 说的那种逃过编译器看管、只能靠审 diff 抓的错。
     /// </para>
     /// </remarks>
     /// <exception cref="System.ArgumentOutOfRangeException"><paramref name="minutes"/> 是负数。</exception>

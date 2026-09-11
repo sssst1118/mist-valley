@@ -1,4 +1,4 @@
-[gd_scene load_steps=18 format=3]
+[gd_scene load_steps=20 format=3]
 
 [ext_resource type="PackedScene" path="res://ui/TimeHud.tscn" id="1_timehud"]
 [ext_resource type="PackedScene" path="res://world/Player.tscn" id="2_player"]
@@ -15,6 +15,8 @@
 [ext_resource type="PackedScene" path="res://world/RanchSpot.tscn" id="13_ranchspot"]
 [ext_resource type="PackedScene" path="res://world/MineSpot.tscn" id="14_minespot"]
 [ext_resource type="PackedScene" path="res://world/CraftingSpot.tscn" id="15_craftingspot"]
+[ext_resource type="PackedScene" path="res://world/CultivationSpot.tscn" id="16_cultivationspot"]
+[ext_resource type="PackedScene" path="res://ui/SpiritHud.tscn" id="17_spirithud"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_wall_h"]
 size = Vector2(1640, 20)
@@ -88,6 +90,9 @@ position = Vector2(294, 170)
 [node name="FishingSpot" parent="." instance=ExtResource("12_fishingspot")]
 position = Vector2(0, 340)
 
+[node name="CultivationSpot" parent="." instance=ExtResource("16_cultivationspot")]
+position = Vector2(-340, 0)
+
 [node name="Hud" type="CanvasLayer" parent="."]
 
 [node name="TimeHud" parent="Hud" instance=ExtResource("1_timehud")]
@@ -101,5 +106,7 @@ PlayerPath = NodePath("../../Player")
 
 [node name="ToolbarHud" parent="Hud" instance=ExtResource("8_toolbarhud")]
 PlayerPath = NodePath("../../Player")
+
+[node name="SpiritHud" parent="Hud" instance=ExtResource("17_spirithud")]
 
 [node name="PanelHost" parent="Hud" instance=ExtResource("9_panelhost")]

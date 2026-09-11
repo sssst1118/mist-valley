@@ -1,0 +1,101 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://ui/CultivationPanel.cs" id="1_cultivationpanel"]
+
+[node name="CultivationPanel" type="Control"]
+process_mode = 3
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+script = ExtResource("1_cultivationpanel")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.04, 0.05, 0.08, 0.78)
+
+[node name="Center" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Content" type="VBoxContainer" parent="Center"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="TitleLabel" type="Label" parent="Center/Content"]
+layout_mode = 2
+text = "修仙"
+horizontal_alignment = 1
+
+[node name="RootLabel" type="Label" parent="Center/Content"]
+layout_mode = 2
+text = "灵根"
+
+[node name="RealmLabel" type="Label" parent="Center/Content"]
+layout_mode = 2
+text = "境界"
+
+[node name="ProgressLabel" type="Label" parent="Center/Content"]
+layout_mode = 2
+text = "修为"
+
+[node name="SpiritLabel" type="Label" parent="Center/Content"]
+layout_mode = 2
+text = "灵力"
+
+[node name="LandLabel" type="Label" parent="Center/Content"]
+layout_mode = 2
+text = "灵脉"
+
+[node name="Scroll" type="ScrollContainer" parent="Center/Content"]
+custom_minimum_size = Vector2(600, 300)
+layout_mode = 2
+horizontal_scroll_mode = 0
+
+[node name="Rows" type="VBoxContainer" parent="Center/Content/Scroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="GateTitle" type="Label" parent="Center/Content/Scroll/Rows"]
+layout_mode = 2
+text = "境界所开"
+
+[node name="GateList" type="VBoxContainer" parent="Center/Content/Scroll/Rows"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="SpellTitle" type="Label" parent="Center/Content/Scroll/Rows"]
+layout_mode = 2
+text = "法术"
+
+[node name="SpellList" type="VBoxContainer" parent="Center/Content/Scroll/Rows"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="MeditateButton" type="Button" parent="Center/Content"]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "打坐"
+
+[node name="ResultLabel" type="Label" parent="Center/Content"]
+layout_mode = 2
+horizontal_alignment = 1
+
+[node name="HintLabel" type="Label" parent="Center/Content"]
+layout_mode = 2
+text = "[Esc] 关闭"
+horizontal_alignment = 1
