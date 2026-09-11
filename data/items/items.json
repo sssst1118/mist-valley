@@ -1,0 +1,35 @@
+{
+  "items": [
+    { "id": "crop_parsnip",                 "name": "防风草",       "description": "春季作物，4 天成熟。",                              "category": "Crop",     "maxStack": 999, "buyPrice": 0,   "sellPrice": 35 },
+    { "id": "crop_potato",                  "name": "土豆",         "description": "春季作物，6 天成熟。",                              "category": "Crop",     "maxStack": 999, "buyPrice": 0,   "sellPrice": 80 },
+    { "id": "crop_strawberry",              "name": "草莓",         "description": "春季作物，8 天成熟，可多次收获。",                  "category": "Crop",     "maxStack": 999, "buyPrice": 0,   "sellPrice": 120 },
+    { "id": "crop_spirit_grass",            "name": "灵芽草",       "description": "春季灵植，12 天成熟；可用于炼丹、炼器与烹饪灵食。", "category": "Crop",     "maxStack": 999, "buyPrice": 0,   "sellPrice": 200 },
+    { "id": "crop_blueberry",               "name": "蓝莓",         "description": "夏季作物，13 天成熟，可多次收获。",                 "category": "Crop",     "maxStack": 999, "buyPrice": 0,   "sellPrice": 50 },
+    { "id": "crop_melon",                   "name": "甜瓜",         "description": "夏季作物，12 天成熟。",                             "category": "Crop",     "maxStack": 999, "buyPrice": 0,   "sellPrice": 250 },
+    { "id": "crop_fire_spirit_flower",      "name": "火灵花",       "description": "夏季灵植，15 天成熟；可用于炼丹、炼器与烹饪灵食。", "category": "Crop",     "maxStack": 999, "buyPrice": 0,   "sellPrice": 350 },
+    { "id": "crop_pumpkin",                 "name": "南瓜",         "description": "秋季作物，13 天成熟。",                             "category": "Crop",     "maxStack": 999, "buyPrice": 0,   "sellPrice": 320 },
+    { "id": "crop_cranberry",               "name": "蔓越莓",       "description": "秋季作物，7 天成熟，可多次收获。",                  "category": "Crop",     "maxStack": 999, "buyPrice": 0,   "sellPrice": 75 },
+    { "id": "crop_gold_spirit_fruit",       "name": "金灵果",       "description": "秋季灵植，18 天成熟；可用于炼丹、炼器与烹饪灵食。", "category": "Crop",     "maxStack": 999, "buyPrice": 0,   "sellPrice": 500 },
+    { "id": "crop_ice_spirit_grass",        "name": "冰灵草",       "description": "冬季灵植，20 天成熟；可用于炼丹、炼器与烹饪灵食。", "category": "Crop",     "maxStack": 999, "buyPrice": 0,   "sellPrice": 600 },
+
+    { "id": "seed_parsnip",                 "name": "防风草种子",   "description": "春季播种，4 天成熟。",                              "category": "Seed",     "maxStack": 999, "buyPrice": 20,  "sellPrice": 0 },
+    { "id": "seed_potato",                  "name": "土豆种子",     "description": "春季播种，6 天成熟。",                              "category": "Seed",     "maxStack": 999, "buyPrice": 50,  "sellPrice": 0 },
+    { "id": "seed_strawberry",              "name": "草莓种子",     "description": "春季播种，8 天成熟，可多次收获。",                  "category": "Seed",     "maxStack": 999, "buyPrice": 100, "sellPrice": 0 },
+    { "id": "seed_spirit_grass",            "name": "灵芽草种子",   "description": "春季播种，12 天成熟。",                             "category": "Seed",     "maxStack": 999, "buyPrice": 150, "sellPrice": 0 },
+    { "id": "seed_blueberry",               "name": "蓝莓种子",     "description": "夏季播种，13 天成熟，可多次收获。",                 "category": "Seed",     "maxStack": 999, "buyPrice": 0,   "sellPrice": 0 },
+    { "id": "seed_melon",                   "name": "甜瓜种子",     "description": "夏季播种，12 天成熟。",                             "category": "Seed",     "maxStack": 999, "buyPrice": 0,   "sellPrice": 0 },
+    { "id": "seed_fire_spirit_flower",      "name": "火灵花种子",   "description": "夏季播种，15 天成熟。",                             "category": "Seed",     "maxStack": 999, "buyPrice": 0,   "sellPrice": 0 },
+    { "id": "seed_pumpkin",                 "name": "南瓜种子",     "description": "秋季播种，13 天成熟。",                             "category": "Seed",     "maxStack": 999, "buyPrice": 0,   "sellPrice": 0 },
+    { "id": "seed_cranberry",               "name": "蔓越莓种子",   "description": "秋季播种，7 天成熟，可多次收获。",                  "category": "Seed",     "maxStack": 999, "buyPrice": 0,   "sellPrice": 0 },
+    { "id": "seed_gold_spirit_fruit",       "name": "金灵果种子",   "description": "秋季播种，18 天成熟。",                             "category": "Seed",     "maxStack": 999, "buyPrice": 0,   "sellPrice": 0 },
+    { "id": "seed_ice_spirit_grass",        "name": "冰灵草种子",   "description": "冬季播种，20 天成熟。",                             "category": "Seed",     "maxStack": 999, "buyPrice": 0,   "sellPrice": 0 },
+
+    { "id": "material_wood",                "name": "木材",         "description": "建造与制作材料。",                                  "category": "Material", "maxStack": 999, "buyPrice": 0,   "sellPrice": 0 },
+    { "id": "material_coal",                "name": "煤",           "description": "制作材料。",                                        "category": "Material", "maxStack": 999, "buyPrice": 0,   "sellPrice": 0 },
+    { "id": "material_copper_ore",          "name": "铜矿",         "description": "铜矿石，可在熔炉中冶炼成铜锭。",                    "category": "Material", "maxStack": 999, "buyPrice": 0,   "sellPrice": 0 },
+    { "id": "material_copper_ingot",        "name": "铜锭",         "description": "由铜矿冶炼而成，制作设备与建筑的材料。",            "category": "Material", "maxStack": 999, "buyPrice": 0,   "sellPrice": 0 },
+    { "id": "material_iron_ingot",          "name": "铁锭",         "description": "由铁矿冶炼而成，制作设备与建筑的材料。",            "category": "Material", "maxStack": 999, "buyPrice": 0,   "sellPrice": 0 },
+    { "id": "material_spirit_spring_water", "name": "灵泉水",       "description": "炼丹与烹饪灵食的材料。",                            "category": "Material", "maxStack": 999, "buyPrice": 0,   "sellPrice": 0 },
+    { "id": "material_spirit_stone",        "name": "灵石",         "description": "修仙材料，用于建造阵法与宗门设施。",                "category": "Material", "maxStack": 999, "buyPrice": 0,   "sellPrice": 0 }
+  ]
+}
