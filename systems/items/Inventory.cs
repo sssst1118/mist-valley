@@ -11,7 +11,7 @@ namespace XingGame.Systems.Items;
 /// 背包。内部是<b>定长槽位数组</b>，不是字典（ADR-012）：堆叠上限决定了同一个物品可以占多个槽
 /// （999 上限下 1500 个木材要占两格），字典表达不了这个。
 /// </summary>
-public sealed class Inventory : ISaveable
+public sealed class Inventory : IInventory, ISaveable
 {
     /// <summary>
     /// 默认槽位数。**设计文档未定义背包容量，待裁决**——§17.2 只给了背包菜单的分类，

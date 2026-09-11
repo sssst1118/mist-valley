@@ -5,6 +5,7 @@ using XingGame.Core.Events;
 using XingGame.Core.Save;
 using XingGame.Core.Time;
 using XingGame.Systems.Interaction;
+using XingGame.Systems.Items;
 
 namespace XingGame.World;
 
@@ -36,6 +37,13 @@ public partial class GameRoot : Node
 
     private ISaveService _saves = null!;
 
+    /// <summary>
+    /// 本存档位要写的系统清单，读档与写档**共用同一份**。不能各写各的：<c>SqliteSaveService.Save</c>
+    /// 是「先清空 blob 表再写」，漏掉一个系统就等于把它从存档里抹掉——而症状会出现在下一次读档，
+    /// 离这里很远。
+    /// </summary>
+    private ISaveable[] _saveables = null!;
+
     private IDisposable? _dayStartedSubscription;
 
     /// <summary>其他桥接节点的取服务入口。</summary>
@@ -46,6 +54,10 @@ public partial class GameRoot : Node
         var services = new ServiceRegistry();
         var bus = new EventBus();
         var weatherGenerator = new WeatherGenerator(WeatherTable.LoadDefault());
+
+        // 物品表在构造时就把 data/items/items.json 逐条校验过了，坏数据炸在这里、不炸在背包里
+        var items = ItemTable.LoadDefault();
+        var inventory = new Inventory(items, Inventory.DefaultSlotCount);
 
         // core/ 是纯 C#，解析不了 user:// —— 存档目录由桥接层换算后注入（ADR-009）
         var saves = new SqliteSaveService(ProjectSettings.GlobalizePath("user://saves"));
@@ -63,6 +75,9 @@ public partial class GameRoot : Node
         services.Register<IWeatherGenerator>(weatherGenerator);
         services.Register<ITimeService>(time);
         services.Register<ISaveService>(saves);
+        services.Register<IItemTable>(items);
+
+        services.Register<IInventory>(inventory);
 
         // 交互系统由本类构造（ADR-007：全游戏只在这里 new 具体实现）。
         // 桥接层的 Interactable 与 InteractPrompt 都必须拿到同一个实例，否则提示永远找不到目标。
@@ -73,8 +88,8 @@ public partial class GameRoot : Node
         _saves = saves;
         Services = services;
 
-        var saveables = new ISaveable[] { time };
-        if (saves.Load(SaveSlot, saveables))
+        _saveables = new ISaveable[] { time, inventory };
+        if (saves.Load(SaveSlot, _saveables))
             GD.Print($"[存档] 已读档 slot {SaveSlot}：世界种子 {_worldSeed}，{GameTimeText(time.Now)}");
         else
             SaveState("新档");   // 新游戏：初始状态立刻落盘，下次启动就走读档那条路
@@ -108,7 +123,7 @@ public partial class GameRoot : Node
     {
         try
         {
-            _saves.Save(SaveSlot, BuildMeta(), new ISaveable[] { _time });
+            _saves.Save(SaveSlot, BuildMeta(), _saveables);
             GD.Print($"[存档] {reason}已写入 slot {SaveSlot}：{GameTimeText(_time.Now)}");
         }
         catch (Exception exception)

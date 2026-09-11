@@ -1,9 +1,10 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="PackedScene" path="res://ui/TimeHud.tscn" id="1_timehud"]
 [ext_resource type="PackedScene" path="res://world/Player.tscn" id="2_player"]
 [ext_resource type="Script" path="res://world/Interactable.cs" id="3_interactable"]
 [ext_resource type="PackedScene" path="res://ui/InteractPrompt.tscn" id="4_interactprompt"]
+[ext_resource type="PackedScene" path="res://ui/InventoryHud.tscn" id="5_inventoryhud"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_wall_h"]
 size = Vector2(1640, 20)
@@ -62,3 +63,5 @@ Prompt = "开采灵脉"
 
 [node name="InteractPrompt" parent="Hud" instance=ExtResource("4_interactprompt")]
 PlayerPath = NodePath("../../Player")
+
+[node name="InventoryHud" parent="Hud" instance=ExtResource("5_inventoryhud")]
