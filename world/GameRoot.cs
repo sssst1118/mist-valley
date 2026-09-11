@@ -161,7 +161,13 @@ public partial class GameRoot : Node
         var animals = AnimalTable.LoadDefault(items);
         var monsters = MonsterTable.LoadDefault(items);
         var mines = MineTable.LoadDefault(items);
-        var recipes = RecipeTable.LoadDefault(items);
+
+        // M3-7 炼丹品级表（§8.7）排在配方表之前：配方加载时要拿它交叉校验「这条丹药配方的阶，
+        // 有没有哪一品炼得出来」。**它不注册**——今天没有任何桥接层消费方（配方列表面板只画材料与
+        // 能不能做，画不出「几品能炼几阶」），注册表里躺一个没人取的实现就是一条没人读的产出（铁律 11）：
+        // 第一个消费方（炼丹面板）出现时再补一行注册
+        var alchemyRanks = AlchemyRankTable.LoadDefault();
+        var recipes = RecipeTable.LoadDefault(items, alchemyRanks);
 
         // M3-1 修仙骨架：灵根与境界两张表都不与物品表交叉，所以不欠别的模块的顺序
         var spiritRoots = SpiritRootTable.LoadDefault();
@@ -188,7 +194,9 @@ public partial class GameRoot : Node
         var codex = new FishCodex(fish);
         var ranch = new Ranch(animals);
         var mineProgress = new MineProgress(mines.Get(DefaultMineId));
-        var crafting = new CraftingSystem(recipes, inventory, items);
+        // 炼丹品级（§8.7）与解锁表同住一个 blob：两者都是「玩家在制作这条线上的档案」。
+        // 新档起点由品级表的最低一档回答（一品炼丹学徒），组合根不写死这个数
+        var crafting = new CraftingSystem(recipes, inventory, items, alchemyRanks);
 
         // 农场的灵脉与福地（M3-5）：构造即 §8.8 的起点「微型灵脉 + 一阶福地」。
         // 它排在 CultivationSystem 之前——打坐的速度要把灵气浓度当第四项乘进去

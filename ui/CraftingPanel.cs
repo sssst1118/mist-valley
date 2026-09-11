@@ -173,8 +173,26 @@ public partial class CraftingPanel : Control
     /// <c>TryCraft</c> 只回一个 <c>bool</c>，说不出为什么失败。这里也只报系统已经给出的事实，
     /// 不替它推断原因。
     /// </summary>
-    private string FailureReason(string recipeId) =>
-        _crafting.IsUnlocked(recipeId) ? "材料或背包空间不足" : "配方未解锁";
+    /// <remarks>
+    /// <b>品级那一段是 M3-7 的门槛逼出来的</b>：不加它的话，炼丹品级不够会被报成
+    /// 「材料或背包空间不足」，玩家就会去找材料——而那条路走不通。
+    /// 判据的两个数都从系统问（<see cref="ICraftingSystem.RequiredAlchemyRank"/> 与
+    /// <see cref="ICraftingSystem.AlchemyRank"/>），不在这里另立一套。
+    /// <para>
+    /// 已知技术债：接口只回 <c>bool</c> 而说不出**为什么**，所以这张表是面板替系统拼的
+    /// （同 <c>ShopPanel</c> 的成败文案表——那一侧系统给了 <c>TradeResult</c>，这一侧没给）。
+    /// 真正的修法是系统出一个失败原因，届时这段该整段删掉。
+    /// </para>
+    /// </remarks>
+    private string FailureReason(string recipeId)
+    {
+        if (!_crafting.IsUnlocked(recipeId)) return "配方未解锁";
+
+        if (_crafting.RequiredAlchemyRank(recipeId) is int required && _crafting.AlchemyRank < required)
+            return $"炼丹品级不够（需 {required} 品，现在 {_crafting.AlchemyRank} 品）";
+
+        return "材料或背包空间不足";
+    }
 
     private static Label MakeLabel(string text, float minWidth, bool expand)
     {

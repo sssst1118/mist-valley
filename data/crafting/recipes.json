@@ -3,6 +3,7 @@
     {
       "id": "recipe_sprinkler",
       "category": "Device",
+      "station": "Unassigned",
       "outputItemId": "craft_sprinkler",
       "outputCount": 1,
       "ingredients": [
@@ -13,6 +14,7 @@
     {
       "id": "recipe_scarecrow",
       "category": "Decor",
+      "station": "Unassigned",
       "outputItemId": "craft_scarecrow",
       "outputCount": 1,
       "ingredients": [
@@ -23,6 +25,7 @@
     {
       "id": "recipe_cherry_bomb",
       "category": "Consumable",
+      "station": "Unassigned",
       "outputItemId": "craft_cherry_bomb",
       "outputCount": 1,
       "ingredients": [
@@ -33,6 +36,8 @@
     {
       "id": "recipe_foundation_pill",
       "category": "Pill",
+      "station": "AlchemyRoom",
+      "pillTier": 2,
       "outputItemId": "craft_foundation_pill",
       "outputCount": 1,
       "ingredients": [
@@ -43,6 +48,7 @@
     {
       "id": "recipe_spirit_gathering_array",
       "category": "Formation",
+      "station": "Unassigned",
       "outputItemId": "craft_spirit_gathering_array",
       "outputCount": 1,
       "ingredients": [
@@ -55,6 +61,7 @@
     {
       "id": "recipe_fried_egg",
       "category": "Consumable",
+      "station": "Unassigned",
       "outputItemId": "craft_fried_egg",
       "outputCount": 1,
       "ingredients": [
@@ -64,6 +71,7 @@
     {
       "id": "recipe_pumpkin_pie",
       "category": "Consumable",
+      "station": "Unassigned",
       "outputItemId": "craft_pumpkin_pie",
       "outputCount": 1,
       "ingredients": [
@@ -76,6 +84,7 @@
     {
       "id": "recipe_spirit_grass_soup",
       "category": "Consumable",
+      "station": "Unassigned",
       "outputItemId": "craft_spirit_grass_soup",
       "outputCount": 1,
       "ingredients": [

@@ -15,14 +15,15 @@ public class M2Audit_Crafting
     public void 缺省配方每一条都能真的做出来_材料扣得一件不差()
     {
         ItemTable items = ItemTable.LoadDefault();
-        RecipeTable recipes = RecipeTable.LoadDefault(items);
+        AlchemyRankTable ranks = AlchemyRankTable.LoadDefault();
+        RecipeTable recipes = RecipeTable.LoadDefault(items, ranks);
 
         Assert.NotEmpty(recipes.All);   // 空表会让下面整个循环白跑
 
         foreach (RecipeDefinition recipe in recipes.All)
         {
             var inventory = new Inventory(items, slotCount: 8);
-            var crafting = new CraftingSystem(recipes, inventory, items);
+            var crafting = new CraftingSystem(recipes, inventory, items, ranks);
 
             foreach (RecipeIngredient ingredient in recipe.Ingredients)
             {
@@ -32,6 +33,11 @@ public class M2Audit_Crafting
             }
 
             Assert.True(crafting.Unlock(recipe.Id));
+
+            // M3-7 起丹药有品级门槛（§8.7）：把这位玩家调到**刚好够炼这一条**的那一品。
+            // 要不到的那一品会在这里红——「配方的门槛谁也够不着」= 一条永远做不出来的配方
+            crafting.SetAlchemyRank(crafting.RequiredAlchemyRank(recipe.Id) ?? crafting.AlchemyRank);
+
             Assert.True(crafting.TryCraft(recipe.Id), $"缺省配方 {recipe.Id} 应该能做出来");
 
             int total = 0;
@@ -64,12 +70,21 @@ public class M2Audit_Crafting
     }
     """;
 
+    /// <summary>夹具品级表：审计用的配方不是丹药，这张表只为满足那条交叉校验。</summary>
+    private static readonly AlchemyRankTable Ranks = AlchemyRankTable.FromJson("""
+    {
+      "ranks": [
+        { "rank": 1, "name": "一品炼丹学徒", "maxTier": 1 }
+      ]
+    }
+    """);
+
     private static CraftingSystem NewSystem(out Inventory inventory)
     {
         ItemTable items = ItemTable.FromJson(ItemsJson);
-        RecipeTable recipes = RecipeTable.FromJson(RecipesJson, items);
+        RecipeTable recipes = RecipeTable.FromJson(RecipesJson, items, Ranks);
         inventory = new Inventory(items, slotCount: 2);
-        return new CraftingSystem(recipes, inventory, items);
+        return new CraftingSystem(recipes, inventory, items, Ranks);
     }
 
     [Fact]

@@ -1,0 +1,13 @@
+{
+  "ranks": [
+    { "rank": 1, "name": "一品炼丹学徒",   "maxTier": 1 },
+    { "rank": 2, "name": "二品炼丹师",     "maxTier": 2 },
+    { "rank": 3, "name": "三品炼丹大师",   "maxTier": 3 },
+    { "rank": 4, "name": "四品炼丹宗师",   "maxTier": 4 },
+    { "rank": 5, "name": "五品炼丹大宗师", "maxTier": 5 },
+    { "rank": 6, "name": "六品炼丹宗师",   "maxTier": 6 },
+    { "rank": 7, "name": "七品炼丹宗师",   "maxTier": 7 },
+    { "rank": 8, "name": "八品炼丹宗师",   "maxTier": 8 },
+    { "rank": 9, "name": "九品炼丹宗师",   "maxTier": 9 }
+  ]
+}

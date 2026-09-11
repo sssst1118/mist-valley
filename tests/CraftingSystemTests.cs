@@ -37,15 +37,30 @@ public sealed class CraftingSystemTests
     }
     """;
 
+    /// <summary>
+    /// 交叉校验与品级门槛要用的品级表（夹具）。夹具里的配方都不是丹药，所以这张表在本文件里
+    /// 只被「配方表 ↔ 品级表」那条交叉校验用到；丹药门槛本身在 <c>AlchemyCraftingTests</c> 里守。
+    /// </summary>
+    private const string RanksJson = """
+    {
+      "ranks": [
+        { "rank": 1, "name": "一品炼丹学徒", "maxTier": 1 },
+        { "rank": 2, "name": "二品炼丹师",   "maxTier": 2 }
+      ]
+    }
+    """;
+
     private static readonly ItemTable Items = ItemTable.FromJson(ItemsJson);
 
-    private static readonly RecipeTable Recipes = RecipeTable.FromJson(RecipesJson, Items);
+    private static readonly AlchemyRankTable Ranks = AlchemyRankTable.FromJson(RanksJson);
+
+    private static readonly RecipeTable Recipes = RecipeTable.FromJson(RecipesJson, Items, Ranks);
 
     private static Inventory NewInventory(int slotCount = 4) => new(Items, slotCount);
 
     private static CraftingSystem NewCrafting(IInventory inventory, params string[] unlocked)
     {
-        var crafting = new CraftingSystem(Recipes, inventory, Items);
+        var crafting = new CraftingSystem(Recipes, inventory, Items, Ranks);
 
         foreach (string recipeId in unlocked) crafting.Unlock(recipeId);
 
@@ -164,7 +179,7 @@ public sealed class CraftingSystemTests
         inventory.Add("material_wood", 61);   // 占三格：30 + 30 + 1
         inventory.Add("material_coal", 2);    // 占一格
 
-        var crafting = new CraftingSystem(RecipeTable.FromJson(scarecrowOnlyRecipes, items), inventory, items);
+        var crafting = new CraftingSystem(RecipeTable.FromJson(scarecrowOnlyRecipes, items, Ranks), inventory, items, Ranks);
         crafting.Unlock("recipe_scarecrow");
 
         Assert.True(crafting.TryCraft("recipe_scarecrow"));
@@ -296,7 +311,7 @@ public sealed class CraftingSystemTests
         inventory.Add("material_wood", 999);   // 占满第一格
         inventory.Add("craft_scarecrow", 4);   // 第二格只装了 4 个
 
-        var crafting = new CraftingSystem(RecipeTable.FromJson(recipes, items), inventory, items);
+        var crafting = new CraftingSystem(RecipeTable.FromJson(recipes, items, Ranks), inventory, items, Ranks);
         crafting.Unlock("recipe_scarecrow");
 
         Assert.True(crafting.TryCraft("recipe_scarecrow"));
@@ -331,9 +346,10 @@ public sealed class CraftingSystemTests
     [Fact]
     public void 构造_依赖为_null_时抛()
     {
-        Assert.Throws<ArgumentNullException>(() => new CraftingSystem(null!, NewInventory(), Items));
-        Assert.Throws<ArgumentNullException>(() => new CraftingSystem(Recipes, null!, Items));
-        Assert.Throws<ArgumentNullException>(() => new CraftingSystem(Recipes, NewInventory(), null!));
+        Assert.Throws<ArgumentNullException>(() => new CraftingSystem(null!, NewInventory(), Items, Ranks));
+        Assert.Throws<ArgumentNullException>(() => new CraftingSystem(Recipes, null!, Items, Ranks));
+        Assert.Throws<ArgumentNullException>(() => new CraftingSystem(Recipes, NewInventory(), null!, Ranks));
+        Assert.Throws<ArgumentNullException>(() => new CraftingSystem(Recipes, NewInventory(), Items, null!));
     }
 
     // ——— 存档 ———
@@ -373,7 +389,7 @@ public sealed class CraftingSystemTests
         }
         """;
 
-        var restored = new CraftingSystem(RecipeTable.FromJson(reorderedRecipes, Items), NewInventory(), Items);
+        var restored = new CraftingSystem(RecipeTable.FromJson(reorderedRecipes, Items, Ranks), NewInventory(), Items, Ranks);
         restored.Deserialize(json, fromVersion: 1);
 
         Assert.Equal(new[] { "recipe_scarecrow" }, restored.UnlockedRecipes.ToArray());
@@ -409,7 +425,8 @@ public sealed class CraftingSystemTests
     {
         CraftingSystem crafting = NewCrafting(NewInventory());
 
-        Assert.Throws<NotSupportedException>(() => crafting.Deserialize(crafting.Serialize(), fromVersion: 2));
+        // 当前支持到 2（M3-7 加了炼丹品级那一列），所以「更新」指的是 3 起
+        Assert.Throws<NotSupportedException>(() => crafting.Deserialize(crafting.Serialize(), fromVersion: 3));
     }
 
     [Fact]

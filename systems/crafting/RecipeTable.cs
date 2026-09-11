@@ -44,6 +44,20 @@ namespace XingGame.Systems.Crafting;
 /// （<c>ItemTableTests</c> 有断言守着）。「放置类设备该不该可堆叠」文档没说，不在这里替它定；
 /// 小麦粉与糖的价格文档也没给，两个价格字段都填 0（文档未给，待补）。</item>
 /// </list>
+/// <para>
+/// <b>M3-7 补进来的两列，都只推得出极少几条</b>：<c>station</c>（§12.3 的四个制作台）与
+/// <c>pillTier</c>（§8.7 的丹药阶数）。八条配方里只有<b>筑基丹</b>两列都有值——炼丹房出自 §6.7
+/// 「炼丹房：炼制丹药」，二阶出自 §8.7 的丹药表（「二阶｜筑基期｜筑基丹、洗髓丹」）。其余七条的
+/// 台子<b>一律 Unassigned</b>：§12.3 只列了四个台子、没说哪条配方归谁，而「工坊也能制作」这条
+/// 反过来说明不了「哪些是背包内制作的」——凑一个看起来合理的归属就是编数据（备案 #62 当初判「不做」
+/// 的理由，今天只被推翻了「一条都写不出来」这一半）。三道料理尤其不属于任何一台：§12.4 的烹饪是
+/// 另一套系统（§17.2 里「制作」与「烹饪」是两个菜单），厨房**刻意没进** <see cref="CraftingStation"/>。
+/// </para>
+/// <para>
+/// 两条校验值得点名：<b>丹药配方缺 <c>pillTier</c> 是错、非丹药配方带 <c>pillTier</c> 也是错</b>，
+/// 而且阶数要落在<b>品级表炼得出来</b>的范围里——否则那是一条谁也做不出来的配方，而它单独看完全自洽
+/// （同「配方 ↔ 物品表」那条交叉校验的理由）。
+/// </para>
 /// </remarks>
 public sealed class RecipeTable : IRecipeTable
 {
@@ -80,9 +94,14 @@ public sealed class RecipeTable : IRecipeTable
             : throw new KeyNotFoundException($"配方表里没有 id 为「{id}」的配方");
 
     /// <param name="items">用于交叉校验两张表是否对得上——这是本方法需要物品表的原因，不是可选装饰。</param>
-    public static RecipeTable FromJson(string json, IItemTable items)
+    /// <param name="ranks">
+    /// 同上，用于交叉校验「丹药配方的阶数有没有哪一品炼得出来」。没有品级表就答不出「这条配方做不做得出来」，
+    /// 不能悄悄跳过——同 <paramref name="items"/> 的处境。
+    /// </param>
+    public static RecipeTable FromJson(string json, IItemTable items, IAlchemyRankTable ranks)
     {
         if (items is null) throw new ArgumentNullException(nameof(items));
+        if (ranks is null) throw new ArgumentNullException(nameof(ranks));
 
         using var document = JsonDocument.Parse(json);
 
@@ -107,36 +126,44 @@ public sealed class RecipeTable : IRecipeTable
             all.Add(definition);
         }
 
-        CrossCheck(all, items);
+        CrossCheck(all, items, ranks);
 
         return new RecipeTable(byId, all.AsReadOnly());
     }
 
     /// <param name="items">同 <see cref="FromJson"/>。</param>
-    public static RecipeTable FromFile(string path, IItemTable items) => FromJson(File.ReadAllText(path), items);
+    /// <param name="ranks">同 <see cref="FromJson"/>。</param>
+    public static RecipeTable FromFile(string path, IItemTable items, IAlchemyRankTable ranks) =>
+        FromJson(File.ReadAllText(path), items, ranks);
 
     /// <summary>
     /// 从构建输出目录逐级上溯找缺省配方表，与 <c>ItemTable.LoadDefault()</c> 同款做法
     /// （见 ARCHITECTURE「技术债：配置文件靠从输出目录逐级上溯定位」，M8 改为桥接层注入路径）。
     /// </summary>
     /// <param name="items">同 <see cref="FromJson"/>。</param>
-    public static RecipeTable LoadDefault(IItemTable items)
+    /// <param name="ranks">同 <see cref="FromJson"/>。</param>
+    public static RecipeTable LoadDefault(IItemTable items, IAlchemyRankTable ranks)
     {
         string? path = FindDefaultFile();
         if (path is null)
             throw new FileNotFoundException($"未找到 {DefaultRelativePath}（已从 {AppContext.BaseDirectory} 逐级上溯）");
 
-        return FromFile(path, items);
+        return FromFile(path, items, ranks);
     }
 
     /// <summary>
-    /// 配方与物品表对不上就是数据错误：产物或材料在物品表里找不到，玩家做出成品、或凑齐材料那一刻才发现
-    /// 取不到东西。这里一次把全部对不上的 id 都列出来——一条一条修比每次重跑才发现下一条快得多
-    /// （同 <c>CropTable</c> 的做法）。
+    /// 配方与别的表对不上就是数据错误，两边都要查：
+    /// <list type="bullet">
+    /// <item><b>物品表</b>——产物或材料在物品表里找不到，玩家做出成品、或凑齐材料那一刻才发现取不到东西。</item>
+    /// <item><b>品级表</b>——丹药配方的阶数没有哪一品炼得出来（§8.7 的表到九阶为止），那是一条<b>永远
+    /// 做不出来</b>的配方，而它单独看完全自洽。这一条只有把两张表放在一起看才露馅。</item>
+    /// </list>
+    /// 一次把全部对不上的都列出来——一条一条修比每次重跑才发现下一条快得多（同 <c>CropTable</c> 的做法）。
     /// </summary>
-    private static void CrossCheck(List<RecipeDefinition> recipes, IItemTable items)
+    private static void CrossCheck(List<RecipeDefinition> recipes, IItemTable items, IAlchemyRankTable ranks)
     {
         var missing = new List<string>();
+        var unreachable = new List<string>();
 
         foreach (RecipeDefinition recipe in recipes)
         {
@@ -144,10 +171,26 @@ public sealed class RecipeTable : IRecipeTable
 
             foreach (RecipeIngredient ingredient in recipe.Ingredients)
                 if (!items.TryGet(ingredient.ItemId, out _)) missing.Add(ingredient.ItemId);
+
+            if (recipe.PillTier is not int tier) continue;
+
+            try
+            {
+                ranks.RequiredRankForTier(tier);
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                // 品级表认得出「几阶要几品」才算这条配方做得出来；认不出就把阶数报出来，
+                // 别让它在玩家点「制作」的那一刻才炸
+                unreachable.Add($"{recipe.Id}（{tier} 阶）");
+            }
         }
 
         if (missing.Count > 0)
             throw new InvalidDataException($"配方表里有物品表找不到的 id：{string.Join("、", missing)}");
+
+        if (unreachable.Count > 0)
+            throw new InvalidDataException($"配方表里有品级表炼不出来的丹药配方：{string.Join("、", unreachable)}");
     }
 
     private static RecipeDefinition ParseRecipe(JsonElement element)
@@ -163,6 +206,9 @@ public sealed class RecipeTable : IRecipeTable
         if (!TryParseCategory(categoryText, out RecipeCategory category))
             throw new InvalidDataException($"配方 {id} 的分类「{categoryText}」不是合法的 RecipeCategory");
 
+        CraftingStation station = ParseStation(element, id!);
+        int? pillTier = ParsePillTier(element, category, id!);
+
         string outputItemId = RequiredString(element, "outputItemId", id!);
         if (string.IsNullOrWhiteSpace(outputItemId))
             throw new InvalidDataException($"配方 {id} 的 outputItemId 为空");
@@ -172,7 +218,58 @@ public sealed class RecipeTable : IRecipeTable
         if (outputCount <= 0)
             throw new InvalidDataException($"配方 {id} 的 outputCount 为 {outputCount}，必须为正");
 
-        return new RecipeDefinition(id!, category, outputItemId, outputCount, ParseIngredients(element, id!));
+        return new RecipeDefinition(id!, category, station, outputItemId, outputCount, pillTier,
+                                    ParseIngredients(element, id!));
+    }
+
+    /// <summary>
+    /// 制作台。<b>字段不在 = <see cref="CraftingStation.Unassigned"/></b>（文档没给逐配方归属，见类注释），
+    /// 写出来了就必须是四个台子之一——认不出的名字当场报错，别让它静静变成「没有台子」。
+    /// </summary>
+    private static CraftingStation ParseStation(JsonElement element, string id)
+    {
+        string? text = OptionalString(element, "station");
+
+        if (text is null) return CraftingStation.Unassigned;
+
+        if (!TryParseStation(text, out CraftingStation station))
+            throw new InvalidDataException($"配方 {id} 的制作台「{text}」不是合法的 CraftingStation");
+
+        return station;
+    }
+
+    /// <summary>
+    /// 丹药的阶数（§8.7）。三条规则，前两条是「这一位只属于丹药」，第三条是它必须有人炼得出来：
+    /// <list type="bullet">
+    /// <item>丹药配方<b>必须有</b>：§8.7 就是照阶把丹药定义下来的，没有阶数就问不出要几品炼丹师。</item>
+    /// <item>非丹药配方<b>不许有</b>：阶是丹药的刻度，一件洒水器带个「二阶」是张冠李戴——真写错了
+    /// 却一路放行，等到有人拿它去问品级才显形。</item>
+    /// <item>必须为正，且能对上品级表——查不出「几品能炼」的阶数是一条谁也做不出来的配方
+    /// （这一条在 <see cref="CrossCheck"/> 里连同物品表一起查）。</item>
+    /// </list>
+    /// </summary>
+    private static int? ParsePillTier(JsonElement element, RecipeCategory category, string id)
+    {
+        int? tier = null;
+
+        if (element.TryGetProperty("pillTier", out JsonElement value))
+        {
+            if (value.ValueKind != JsonValueKind.Number || !value.TryGetInt32(out int parsed))
+                throw new InvalidDataException($"配方 {id} 的 pillTier 不是整数：{value.GetRawText()}");
+
+            if (parsed < 1)
+                throw new InvalidDataException($"配方 {id} 的丹药品阶 {parsed} 不是正数");
+
+            tier = parsed;
+        }
+
+        if (category == RecipeCategory.Pill && tier is null)
+            throw new InvalidDataException($"丹药配方 {id} 缺少 pillTier：§8.7 把丹药定义成一至十二阶，没有阶数就问不出要几品炼丹师才能炼");
+
+        if (category != RecipeCategory.Pill && tier is not null)
+            throw new InvalidDataException($"配方 {id} 的分类是 {category} 却带了 pillTier {tier}：阶是丹药的刻度（§8.7）");
+
+        return tier;
     }
 
     /// <summary>
@@ -236,6 +333,26 @@ public sealed class RecipeTable : IRecipeTable
         }
 
         category = default;
+        return false;
+    }
+
+    /// <summary>
+    /// 台子名同样按<b>大小写不敏感</b>匹配，理由与 <see cref="TryParseCategory"/> 一模一样：
+    /// 手写 JSON 的 Mod 作者不该被大小写绊住，而「按数字序号写台子」这种会随枚举插值错位的事
+    /// 必须被拒（<c>Enum.TryParse</c> 会把它当序号收下）。
+    /// </summary>
+    private static bool TryParseStation(string text, out CraftingStation station)
+    {
+        foreach (CraftingStation candidate in Enum.GetValues<CraftingStation>())
+        {
+            if (string.Equals(candidate.ToString(), text, StringComparison.OrdinalIgnoreCase))
+            {
+                station = candidate;
+                return true;
+            }
+        }
+
+        station = default;
         return false;
     }
 

@@ -40,21 +40,47 @@ public class RecipeTableTests
     }
     """;
 
+    /// <summary>
+    /// 交叉校验用的品级表（夹具）。只有三品、且只到三阶：够测「丹药阶数要落在炼得出来的范围里」，
+    /// 又多留了一档**炼不出来**的边界（四阶）给坏数据用例用。
+    /// </summary>
+    private const string RanksJson = """
+    {
+      "ranks": [
+        { "rank": 1, "name": "一品炼丹学徒", "maxTier": 1 },
+        { "rank": 2, "name": "二品炼丹师",   "maxTier": 2 },
+        { "rank": 3, "name": "三品炼丹大师", "maxTier": 3 }
+      ]
+    }
+    """;
+
     private static readonly ItemTable Items = ItemTable.FromJson(ItemsJson);
 
-    private static readonly RecipeTable Table = RecipeTable.FromJson(ValidJson, Items);
+    private static readonly AlchemyRankTable Ranks = AlchemyRankTable.FromJson(RanksJson);
+
+    private static readonly RecipeTable Table = RecipeTable.FromJson(ValidJson, Items, Ranks);
 
     /// <summary>把条目拼成一份表。坏数据用例只改一个字段，不必每次抄一整份 JSON。</summary>
     private static string JsonWith(params string[] entries) => "{ \"recipes\": [" + string.Join(",", entries) + "] }";
 
+    /// <summary>
+    /// 一条配方条目。<paramref name="station"/> 与 <paramref name="pillTier"/> 留空表示<b>字段不在</b>
+    /// ——两者都在「缺省/缺失」上有语义（制作台缺省是 Unassigned，丹药缺阶数该报错），所以这里
+    /// 不能给它们默认值。
+    /// </summary>
     private static string Recipe(
         string id = "recipe_scarecrow",
         string category = "Decor",
         string outputItemId = "craft_scarecrow",
         string outputCount = "1",
+        string station = "",
+        string pillTier = "",
         string ingredients = """[ { "itemId": "material_wood", "count": 50 }, { "itemId": "material_coal", "count": 1 } ]""") =>
-        $"{{ \"id\": \"{id}\", \"category\": \"{category}\", \"outputItemId\": \"{outputItemId}\", " +
-        $"\"outputCount\": {outputCount}, \"ingredients\": {ingredients} }}";
+        $"{{ \"id\": \"{id}\", \"category\": \"{category}\", " +
+        (station.Length == 0 ? "" : $"\"station\": \"{station}\", ") +
+        $"\"outputItemId\": \"{outputItemId}\", \"outputCount\": {outputCount}, " +
+        (pillTier.Length == 0 ? "" : $"\"pillTier\": {pillTier}, ") +
+        $"\"ingredients\": {ingredients} }}";
 
     [Fact]
     public void 正常加载_All_的数量与顺序与文件一致()
@@ -83,7 +109,7 @@ public class RecipeTableTests
     public void 分类名_大小写不敏感()
     {
         // Mod 作者手写 JSON 时不该被大小写绊住（同 ItemTable 解析物品分类）
-        RecipeTable table = RecipeTable.FromJson(JsonWith(Recipe(category: "dEcOr")), Items);
+        RecipeTable table = RecipeTable.FromJson(JsonWith(Recipe(category: "dEcOr")), Items, Ranks);
 
         Assert.Equal(RecipeCategory.Decor, table.Get("recipe_scarecrow").Category);
     }
@@ -107,7 +133,7 @@ public class RecipeTableTests
     {
         // 重复 id 会让「按 id 取到的是哪一条」取决于文件顺序，而两条的材料可能不同
         var error = Assert.Throws<InvalidDataException>(
-            () => RecipeTable.FromJson(JsonWith(Recipe(), Recipe(category: "Device")), Items));
+            () => RecipeTable.FromJson(JsonWith(Recipe(), Recipe(category: "Device")), Items, Ranks));
 
         Assert.Contains("recipe_scarecrow", error.Message);
     }
@@ -117,7 +143,7 @@ public class RecipeTableTests
     [InlineData("   ")]
     public void 加载_id_为空时报错(string id)
     {
-        Assert.Throws<InvalidDataException>(() => RecipeTable.FromJson(JsonWith(Recipe(id: id)), Items));
+        Assert.Throws<InvalidDataException>(() => RecipeTable.FromJson(JsonWith(Recipe(id: id)), Items, Ranks));
     }
 
     [Fact]
@@ -126,7 +152,7 @@ public class RecipeTableTests
         const string entry =
             """{ "category": "Decor", "outputItemId": "craft_scarecrow", "outputCount": 1, "ingredients": [ { "itemId": "material_wood", "count": 1 } ] }""";
 
-        Assert.Throws<InvalidDataException>(() => RecipeTable.FromJson(JsonWith(entry), Items));
+        Assert.Throws<InvalidDataException>(() => RecipeTable.FromJson(JsonWith(entry), Items, Ranks));
     }
 
     [Theory]
@@ -135,7 +161,7 @@ public class RecipeTableTests
     public void 加载_产物或分类为空时报错(string category, string outputItemId)
     {
         Assert.Throws<InvalidDataException>(
-            () => RecipeTable.FromJson(JsonWith(Recipe(category: category, outputItemId: outputItemId)), Items));
+            () => RecipeTable.FromJson(JsonWith(Recipe(category: category, outputItemId: outputItemId)), Items, Ranks));
     }
 
     [Theory]
@@ -145,7 +171,7 @@ public class RecipeTableTests
     public void 加载_分类不是合法的_RecipeCategory_时报错(string category)
     {
         var error = Assert.Throws<InvalidDataException>(
-            () => RecipeTable.FromJson(JsonWith(Recipe(category: category)), Items));
+            () => RecipeTable.FromJson(JsonWith(Recipe(category: category)), Items, Ranks));
 
         Assert.Contains("recipe_scarecrow", error.Message);
     }
@@ -156,7 +182,7 @@ public class RecipeTableTests
     public void 加载_产出数量非正时报错且消息里带_id(string outputCount)
     {
         var error = Assert.Throws<InvalidDataException>(
-            () => RecipeTable.FromJson(JsonWith(Recipe(outputCount: outputCount)), Items));
+            () => RecipeTable.FromJson(JsonWith(Recipe(outputCount: outputCount)), Items, Ranks));
 
         Assert.Contains("recipe_scarecrow", error.Message);
     }
@@ -169,7 +195,7 @@ public class RecipeTableTests
     public void 加载_材料列表为空或数量非正时报错(string ingredients)
     {
         Assert.Throws<InvalidDataException>(
-            () => RecipeTable.FromJson(JsonWith(Recipe(ingredients: ingredients)), Items));
+            () => RecipeTable.FromJson(JsonWith(Recipe(ingredients: ingredients)), Items, Ranks));
     }
 
     [Fact]
@@ -179,7 +205,7 @@ public class RecipeTableTests
         const string twice = """[ { "itemId": "material_wood", "count": 50 }, { "itemId": "material_wood", "count": 5 } ]""";
 
         var error = Assert.Throws<InvalidDataException>(
-            () => RecipeTable.FromJson(JsonWith(Recipe(ingredients: twice)), Items));
+            () => RecipeTable.FromJson(JsonWith(Recipe(ingredients: twice)), Items, Ranks));
 
         Assert.Contains("material_wood", error.Message);
     }
@@ -192,27 +218,34 @@ public class RecipeTableTests
     [InlineData("""{ "id": "recipe_scarecrow", "category": "Decor", "outputItemId": "craft_scarecrow", "outputCount": 1, "ingredients": [ { "itemId": "material_wood" } ] }""")]  // 材料缺 count
     public void 加载_缺字段时报错(string entry)
     {
-        Assert.Throws<InvalidDataException>(() => RecipeTable.FromJson(JsonWith(entry), Items));
+        Assert.Throws<InvalidDataException>(() => RecipeTable.FromJson(JsonWith(entry), Items, Ranks));
     }
 
     [Fact]
     public void 加载_没有_recipes_数组时报错()
     {
-        Assert.Throws<InvalidDataException>(() => RecipeTable.FromJson("""{ "配方": [] }""", Items));
+        Assert.Throws<InvalidDataException>(() => RecipeTable.FromJson("""{ "配方": [] }""", Items, Ranks));
     }
 
     [Fact]
     public void 加载_传入空物品表时报错()
     {
         // 交叉校验是本表的必要步骤，没有物品表根本校验不了，不能悄悄跳过
-        Assert.Throws<ArgumentNullException>(() => RecipeTable.FromJson(ValidJson, null!));
+        Assert.Throws<ArgumentNullException>(() => RecipeTable.FromJson(ValidJson, null!, Ranks));
+    }
+
+    [Fact]
+    public void 加载_传入空品级表时报错()
+    {
+        // 同上：没有品级表就答不出「这条丹药配方做不做得出来」，那也是交叉校验的一部分
+        Assert.Throws<ArgumentNullException>(() => RecipeTable.FromJson(ValidJson, Items, null!));
     }
 
     [Fact]
     public void 交叉校验_产物不在物品表里时报错且消息里带那个_id()
     {
         var error = Assert.Throws<InvalidDataException>(
-            () => RecipeTable.FromJson(JsonWith(Recipe(outputItemId: "craft_ghost")), Items));
+            () => RecipeTable.FromJson(JsonWith(Recipe(outputItemId: "craft_ghost")), Items, Ranks));
 
         Assert.Contains("craft_ghost", error.Message);
     }
@@ -223,7 +256,7 @@ public class RecipeTableTests
         const string ghost = """[ { "itemId": "material_ghost", "count": 1 } ]""";
 
         var error = Assert.Throws<InvalidDataException>(
-            () => RecipeTable.FromJson(JsonWith(Recipe(ingredients: ghost)), Items));
+            () => RecipeTable.FromJson(JsonWith(Recipe(ingredients: ghost)), Items, Ranks));
 
         Assert.Contains("material_ghost", error.Message);
     }
@@ -235,15 +268,126 @@ public class RecipeTableTests
         const string ghost = """[ { "itemId": "material_ghost", "count": 1 } ]""";
 
         var error = Assert.Throws<InvalidDataException>(
-            () => RecipeTable.FromJson(JsonWith(Recipe(outputItemId: "craft_ghost", ingredients: ghost)), Items));
+            () => RecipeTable.FromJson(JsonWith(Recipe(outputItemId: "craft_ghost", ingredients: ghost)), Items, Ranks));
 
         Assert.Contains("craft_ghost", error.Message);
         Assert.Contains("material_ghost", error.Message);
     }
 
+    // ——— 制作台（§12.3 的四个台子）：能推的照文档推，推不出来的一律 Unassigned ———
+
+    [Fact]
+    public void 制作台_写出来的台子逐项落到定义上_大小写不敏感()
+    {
+        // 「炼丹房」这一档出自 §6.7 的「炼丹房：炼制丹药」，是八条配方里唯一推得出归属的一条
+        RecipeTable table = RecipeTable.FromJson(
+            JsonWith(Recipe(station: "alchemyroom")), Items, Ranks);
+
+        Assert.Equal(CraftingStation.AlchemyRoom, table.Get("recipe_scarecrow").Station);
+    }
+
+    [Fact]
+    public void 制作台_字段不在时是_Unassigned_而不是背包内制作()
+    {
+        // 「文档没说」与「在背包里做」是两件事。缺省成 Unassigned 是唯一不撒谎的落点
+        RecipeTable table = RecipeTable.FromJson(JsonWith(Recipe()), Items, Ranks);
+
+        Assert.Equal(CraftingStation.Unassigned, table.Get("recipe_scarecrow").Station);
+    }
+
+    [Theory]
+    [InlineData("背包里")]   // 中文名（文档里的名字不是枚举名）
+    [InlineData("1")]        // 数字序号：Enum.TryParse 会当序号收下，序号却会随枚举插值错位（ADR-012）
+    [InlineData("Kitchen")]  // §12.4 的厨房：刻意不是制作台的一档，写进来必须被拒
+    public void 加载_制作台认不出时_报错且消息里带_id(string station)
+    {
+        var error = Assert.Throws<InvalidDataException>(
+            () => RecipeTable.FromJson(JsonWith(Recipe(station: station)), Items, Ranks));
+
+        Assert.Contains("recipe_scarecrow", error.Message);
+    }
+
+    /// <summary>
+    /// <b>刻意的否定式决定：制作台里没有「厨房」这一档</b>。§12.4 的烹饪是另一套系统
+    /// （§17.2 里「制作」与「烹饪」是两个菜单），把厨房塞进制作台枚举会让两套系统在数据类型上先纠缠起来。
+    /// 三道料理因此是 Unassigned，不是「厨房」。真要合并时，先改这条用例。
+    /// </summary>
+    [Fact]
+    public void 刻意不做_制作台里没有厨房这一档()
+    {
+        Assert.DoesNotContain(Enum.GetNames<CraftingStation>(), name => name.Contains("Kitchen"));
+        Assert.DoesNotContain(Enum.GetNames<CraftingStation>(), name => name.Contains("Cook"));
+    }
+
+    // ——— 丹药的阶数（§8.7）：只属于丹药，而且必须有人炼得出来 ———
+
+    [Fact]
+    public void 丹药品阶_逐项落到定义上_非丹药没有这一位()
+    {
+        const string pill = """[ { "itemId": "material_wood", "count": 1 } ]""";
+
+        RecipeTable table = RecipeTable.FromJson(
+            JsonWith(Recipe(category: "Pill", station: "AlchemyRoom", pillTier: "2", ingredients: pill)), Items, Ranks);
+
+        Assert.Equal(2, table.Get("recipe_scarecrow").PillTier);
+        Assert.Null(Table.Get("recipe_scarecrow").PillTier);   // 稻草人不是丹药，这一位是 null
+    }
+
+    [Fact]
+    public void 加载_丹药配方缺_pillTier_时报错且消息里带_id()
+    {
+        // §8.7 把丹药定义成一至十二阶：没有阶数就问不出「要几品炼丹师」，那是一条没人拦得住的配方
+        const string pill = """[ { "itemId": "material_wood", "count": 1 } ]""";
+
+        var error = Assert.Throws<InvalidDataException>(
+            () => RecipeTable.FromJson(JsonWith(Recipe(category: "Pill", ingredients: pill)), Items, Ranks));
+
+        Assert.Contains("recipe_scarecrow", error.Message);
+    }
+
+    [Fact]
+    public void 加载_非丹药配方带_pillTier_时报错()
+    {
+        // 阶是丹药的刻度：一件稻草人带个「二阶」是张冠李戴，放行之后没人会在意
+        var error = Assert.Throws<InvalidDataException>(
+            () => RecipeTable.FromJson(JsonWith(Recipe(pillTier: "2")), Items, Ranks));
+
+        Assert.Contains("recipe_scarecrow", error.Message);
+    }
+
+    [Theory]
+    [InlineData("0")]     // 零阶：§8.7 的丹药从一阶起
+    [InlineData("-1")]
+    [InlineData("1.5")]   // 小数：手写 JSON 常事，报错要能定位到是哪一条
+    [InlineData("\"二阶\"")]   // 中文名不是数
+    public void 加载_丹药品阶不是正整数时报错(string pillTier)
+    {
+        const string pill = """[ { "itemId": "material_wood", "count": 1 } ]""";
+
+        Assert.Throws<InvalidDataException>(
+            () => RecipeTable.FromJson(JsonWith(Recipe(category: "Pill", pillTier: pillTier, ingredients: pill)),
+                                       Items, Ranks));
+    }
+
+    [Fact]
+    public void 交叉校验_丹药阶数没有哪一品炼得出来时报错()
+    {
+        // 夹具品级表只到三阶：四阶丹药在今天这张表下谁也炼不出来（§8.7 的表到九阶为止），
+        // 而这条配方单独看完全自洽——只有拿品级表来对才露馅
+        const string pill = """[ { "itemId": "material_wood", "count": 1 } ]""";
+
+        var error = Assert.Throws<InvalidDataException>(
+            () => RecipeTable.FromJson(
+                JsonWith(Recipe(id: "recipe_pill_4", category: "Pill", pillTier: "4", ingredients: pill)),
+                Items, Ranks));
+
+        Assert.Contains("recipe_pill_4", error.Message);
+    }
+
     // ——— 以下是针对缺省数据文件本身的用例：抄错了、多录了都要有人发现 ———
 
-    private static RecipeTable DefaultTable() => RecipeTable.LoadDefault(ItemTable.LoadDefault());
+    private static RecipeTable DefaultTable() =>
+        RecipeTable.LoadDefault(ItemTable.LoadDefault(), AlchemyRankTable.LoadDefault());
 
     /// <summary>材料数量逐条比对：多录一样、少录一样、数量抄错，三种都要红。</summary>
     private static void AssertIngredients(RecipeDefinition recipe, string spec)
@@ -294,6 +438,43 @@ public class RecipeTableTests
 
             AssertIngredients(recipe, ingredients);
         }
+
+        // 筑基丹是二阶：§8.7 的丹药表把「筑基丹」写在这一行（docs/public/design.md 第 947 行）。
+        // 这一位决定要几品炼丹师（品级表答「二品」），所以抄错阶数会让门槛整体错一档
+        Assert.Equal(2, table.Get("recipe_foundation_pill").PillTier);
+
+        // 其余七条不是丹药，这一位必须是 null——有值就说明有人张冠李戴了
+        Assert.All(
+            table.All.Where(recipe => recipe.Category != RecipeCategory.Pill),
+            recipe => Assert.Null(recipe.PillTier));
+    }
+
+    [Fact]
+    public void 缺省数据文件_制作台只推出了一条_其余七条都是_Unassigned()
+    {
+        // §12.3 只列了四个台子（第 1339 行），逐配方的归属文档一个字都没给（备案 #62）。
+        // 八条里只有筑基丹推得出：§6.7 的建筑功能表写着「炼丹房：炼制丹药」（第 362 行）。
+        // 其余七条**不许照直觉补**——推不出来是 Unassigned，不是「随便挑一个像的」：
+        // 洒水器/稻草人/樱桃炸弹：§6.7 的工坊只写「杂交、制作」，而 §12.3 另有「背包内制作」，
+        // 文档没给「哪些在背包里做」的界线；聚灵阵：四个台子之外的东西（§13.2 里它跟建筑并列）；
+        // 三道料理：§12.4 的烹饪是另一套系统，厨房刻意不是制作台的一档。
+        var expected = new (string RecipeId, CraftingStation Station)[]
+        {
+            ("recipe_sprinkler",              CraftingStation.Unassigned),
+            ("recipe_scarecrow",              CraftingStation.Unassigned),
+            ("recipe_cherry_bomb",            CraftingStation.Unassigned),
+            ("recipe_foundation_pill",        CraftingStation.AlchemyRoom),
+            ("recipe_spirit_gathering_array", CraftingStation.Unassigned),
+            ("recipe_fried_egg",              CraftingStation.Unassigned),
+            ("recipe_pumpkin_pie",            CraftingStation.Unassigned),
+            ("recipe_spirit_grass_soup",      CraftingStation.Unassigned),
+        };
+
+        RecipeTable table = DefaultTable();
+
+        Assert.Equal(8, table.All.Count);   // 别让少录一条配方从这条用例下面溜过去
+        foreach ((string recipeId, CraftingStation station) in expected)
+            Assert.Equal(station, table.Get(recipeId).Station);
     }
 
     [Fact]
@@ -372,7 +553,7 @@ public class RecipeTableTests
         // 材料归 items.json / ranching.json，本模块只引用不重定义（小麦粉与糖是文档点过名的例外）。
         // 张冠李戴（比如把「灵泉水」写成一件装备）也该被发现
         ItemTable items = ItemTable.LoadDefault();
-        RecipeTable table = RecipeTable.LoadDefault(items);
+        RecipeTable table = RecipeTable.LoadDefault(items, AlchemyRankTable.LoadDefault());
 
         string[] materials = table.All
             .SelectMany(recipe => recipe.Ingredients)
