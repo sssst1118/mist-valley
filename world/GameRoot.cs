@@ -6,6 +6,7 @@ using XingGame.Core.Save;
 using XingGame.Core.Time;
 using XingGame.Systems.Combat;
 using XingGame.Systems.Crafting;
+using XingGame.Systems.Cultivation;
 using XingGame.Systems.Economy;
 using XingGame.Systems.Farming;
 using XingGame.Systems.Fishing;
@@ -50,6 +51,23 @@ public partial class GameRoot : Node
     /// 就是它。将来多矿洞时这里换成玩家选中的那座（备案 #50 的电梯入口）。
     /// </summary>
     private const string DefaultMineId = "mine_valley";
+
+    /// <summary>
+    /// 新档的起点灵根：伪灵根（§4.2 六档里最差的一档，§4.6 的初始资源里灵根一栏写的是
+    /// 「随机生成（可重掷 3 次）」，**但各档灵根的出现权重文档没给**，所以 M3-1 既不掷也不编分布，
+    /// 先给一个占位档——编出来的权重和真数据长得一模一样，将来没人分得清。
+    /// 具体灵根留空：§4.3/§4.4 的八种都挂在变异/先天异两档下，伪灵根没有对应条目。
+    /// </summary>
+    private const string StartingGradeId = "grade_false";
+
+    /// <summary>
+    /// 新档的起点境界：炼气一层。§8.1 把炼气期锚在「第 1 年春季」，层数自然从 1 起
+    /// （文档没写「玩家从第几层开始」，取该境界的第一个小境界）。
+    /// </summary>
+    private const string StartingRealmId = "qi_refining";
+
+    /// <summary>同上：1 = 炼气一层。</summary>
+    private const int StartingStage = 1;
 
     /// <summary>
     /// 攒下的零头分钟。每帧增量是小数（10 分/秒 ÷ 60fps ≈ 0.167）而 Advance 只收 int，
@@ -134,6 +152,10 @@ public partial class GameRoot : Node
         var mines = MineTable.LoadDefault(items);
         var recipes = RecipeTable.LoadDefault(items);
 
+        // M3-1 修仙骨架：灵根与境界两张表都不与物品表交叉，所以不欠别的模块的顺序
+        var spiritRoots = SpiritRootTable.LoadDefault();
+        var realms = RealmTable.LoadDefault();
+
         // 表是只读数据，这几件才是各自要进存档的状态（见下面的 _saveables）
         var wallet = new Wallet();
         var prices = new MarketPrices(items);
@@ -142,6 +164,8 @@ public partial class GameRoot : Node
         var ranch = new Ranch(animals);
         var mineProgress = new MineProgress(mines.Get(DefaultMineId));
         var crafting = new CraftingSystem(recipes, inventory, items);
+        var cultivation = new CultivationSystem(
+            spiritRoots, realms, StartingGradeId, rootId: null, StartingRealmId, StartingStage);
 
         // 商店要读时间判营业时间（§5.2），所以排在 TimeService 之后；钱与货都是从构造时注入的
         var shopSystem = new ShopSystem(shops, items, inventory, wallet, time, prices);
@@ -192,6 +216,12 @@ public partial class GameRoot : Node
         services.Register<IAnimalTable>(animals);
         services.Register<IRecipeTable>(recipes);
 
+        // M3-1：玩家的灵根与境界按接口注册；两张表也注册，因为「六档品级各是什么」与
+        // 「九大境界各是什么」只有表答得出（状态件只答「玩家现在在哪一档」）。
+        services.Register<ISpiritRootTable>(spiritRoots);
+        services.Register<IRealmTable>(realms);
+        services.Register<ICultivationSystem>(cultivation);
+
         WorldSeed = worldSeed;
         _time = time;
         _saves = saves;
@@ -205,6 +235,7 @@ public partial class GameRoot : Node
         {
             time, inventory, farmland,
             wallet, prices, friendship, codex, ranch, mineProgress, crafting,
+            cultivation,
         };
         if (saves.Load(SaveSlot, _saveables))
         {
@@ -269,7 +300,9 @@ public partial class GameRoot : Node
     /// <remarks>
     /// <b>灵石不在这里发（刻意的，不是漏了）</b>：§4.6 的「灵石 0」= 背包里有 0 个——灵石是物品
     /// 而不是货币（备案 #55），钱包根本没有灵石入口，所以「0」天然成立，无需一句代码。
-    /// 房屋 / 宠物 / 灵根 §4.6 也列了，但要等住宅、宠物与灵根系统，M2 不提前实现（铁律 3）。
+    /// 房屋 / 宠物 §4.6 也列了，但要等住宅与宠物系统，不提前实现（铁律 3）。
+    /// 灵根 M3-1 起有了归宿：它不进背包，而是 <c>CultivationSystem</c> 的构造参数
+    /// （见 <c>StartingGradeId</c>）——一件既不是物品、也不是货币的**状态**。
     /// </remarks>
     private static void GrantStartingResources(IInventory inventory, IEconomySystem wallet)
     {

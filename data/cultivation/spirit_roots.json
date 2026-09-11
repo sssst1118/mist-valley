@@ -1,0 +1,21 @@
+{
+  "_comment": "灵根表。数值全部照抄设计文档，没有一个是我们编的：§4.2 六档品级（docs/public/design.md 162-171 行）、§4.3 四种变异灵根（173-179 行）、§4.4 四种先天异灵根（181-187 行）。grades 是「修炼速度与突破概率的档」，roots 是 §4.3/§4.4 点过名的具体灵根——四档普通品级（伪/真三/真双/天）没有对应的具体灵根条目，所以玩家的灵根 = 品级（必填）+ 具体灵根（变异/先天异才填，其余为 null）。§4.2「属性数量」列里「2 种（交融异变）」「1 种（天地诞生）」的括号注是解释不是数值，未落成字段。",
+  "grades": [
+    { "id": "grade_false",       "name": "伪灵根（五行杂灵根）", "attributeCountMin": 4, "attributeCountMax": 5, "cultivationSpeedMultiplier": 0.3, "foundationSuccessPercent": 5,   "goldenCoreSuccessPercent": 0.1, "nascentSoulSuccessPercent": 0 },
+    { "id": "grade_true_triple", "name": "真灵根（三灵根）",     "attributeCountMin": 3, "attributeCountMax": 3, "cultivationSpeedMultiplier": 0.6, "foundationSuccessPercent": 30,  "goldenCoreSuccessPercent": 5,   "nascentSoulSuccessPercent": 1 },
+    { "id": "grade_true_dual",   "name": "真灵根（双灵根）",     "attributeCountMin": 2, "attributeCountMax": 2, "cultivationSpeedMultiplier": 1.0, "foundationSuccessPercent": 60,  "goldenCoreSuccessPercent": 20,  "nascentSoulSuccessPercent": 5 },
+    { "id": "grade_heaven",      "name": "天灵根（单灵根）",     "attributeCountMin": 1, "attributeCountMax": 1, "cultivationSpeedMultiplier": 2.0, "foundationSuccessPercent": 95,  "goldenCoreSuccessPercent": 60,  "nascentSoulSuccessPercent": 20 },
+    { "id": "grade_mutation",    "name": "变异灵根",             "attributeCountMin": 2, "attributeCountMax": 2, "cultivationSpeedMultiplier": 2.5, "foundationSuccessPercent": 95,  "goldenCoreSuccessPercent": 70,  "nascentSoulSuccessPercent": 30 },
+    { "id": "grade_innate",      "name": "先天异灵根",           "attributeCountMin": 1, "attributeCountMax": 1, "cultivationSpeedMultiplier": 4.0, "foundationSuccessPercent": 100, "goldenCoreSuccessPercent": 90,  "nascentSoulSuccessPercent": 50 }
+  ],
+  "roots": [
+    { "id": "root_thunder", "name": "雷灵根",   "gradeId": "grade_mutation", "mutationSource": "金 + 木", "trait": "杀伐极强，克制妖魔邪祟", "gameEffect": "对妖兽和魔修伤害 +50%" },
+    { "id": "root_ice",     "name": "冰灵根",   "gradeId": "grade_mutation", "mutationSource": "水 + 金", "trait": "冰封控场，攻守兼备",     "gameEffect": "可冻结敌人，灵田可瞬间降温" },
+    { "id": "root_wind",    "name": "风灵根",   "gradeId": "grade_mutation", "mutationSource": "木 + 火", "trait": "速度冠绝同阶，擅长遁法", "gameEffect": "移动速度 +40%，可短距离瞬移" },
+    { "id": "root_dark",    "name": "暗灵根",   "gradeId": "grade_mutation", "mutationSource": "土 + 金", "trait": "诡谲隐匿，魔道多见",     "gameEffect": "可隐身，夜间修炼速度翻倍" },
+    { "id": "root_sword",   "name": "剑灵根",   "gradeId": "grade_innate",   "exclusiveDao": "剑道",     "gameEffect": "所有剑类法宝威力 +100%，可施展“剑意”技能" },
+    { "id": "root_space",   "name": "空灵根",   "gradeId": "grade_innate",   "exclusiveDao": "空间之道", "gameEffect": "解锁空间法术，可开辟个人洞天" },
+    { "id": "root_chaos",   "name": "混沌灵根", "gradeId": "grade_innate",   "exclusiveDao": "混沌之道", "gameEffect": "可修炼任何属性功法，无冲突" },
+    { "id": "root_star",    "name": "星辰灵根", "gradeId": "grade_innate",   "exclusiveDao": "星辰之道", "gameEffect": "夜间修炼速度 +200%，可引星辰之力" }
+  ]
+}
