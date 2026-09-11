@@ -50,10 +50,28 @@ public sealed class Farmland : ISaveable
     public bool IsReadyToHarvest(TileCoord tile) =>
         _plots.TryGetValue(tile, out Plot? plot) && plot.Crop is not null && plot.DaysGrown >= plot.Crop.GrowthDays;
 
+    /// <summary>
+    /// 这一格现在锄得动吗（还是未开垦）。<b>只读</b>：不改任何状态。
+    /// </summary>
+    /// <remarks>
+    /// <b>「能不能」与「做不做」必须是同一条判据</b>：灵锄术要在扣灵力**之前**知道这一片有几格真的
+    /// 动得了（<c>LifeSpellSystem.TryCastAt</c>），而它不能靠先试着锄一下来问——那已经把地改了。
+    /// 所以判据只留这一份，<see cref="TryTill"/> 用的也是它：分开写两份的话，改了一处忘了另一处，
+    /// 症状就是「灵力扣了、地没动」。
+    /// </remarks>
+    public bool CanTill(TileCoord tile) => StateOf(tile) == SoilState.Untilled;
+
+    /// <summary>
+    /// 这一格现在浇得动吗（已开垦、且还没浇）。<b>只读</b>：不改任何状态。
+    /// </summary>
+    /// <remarks>与 <see cref="CanTill"/> 同理：法术要在花灵力之前先问这一句。</remarks>
+    public bool CanWater(TileCoord tile) =>
+        _plots.TryGetValue(tile, out Plot? plot) && plot.State == SoilState.Tilled;
+
     /// <summary>未开垦 → 已开垦。已经开垦（含已浇水）的格再锄一次返回 false，不改变任何状态。</summary>
     public bool TryTill(TileCoord tile)
     {
-        if (StateOf(tile) != SoilState.Untilled) return false;
+        if (!CanTill(tile)) return false;
 
         _plots[tile] = new Plot(SoilState.Tilled);
         return true;
@@ -64,9 +82,9 @@ public sealed class Farmland : ISaveable
     /// </summary>
     public bool TryWater(TileCoord tile)
     {
-        if (!_plots.TryGetValue(tile, out Plot? plot) || plot.State != SoilState.Tilled) return false;
+        if (!CanWater(tile)) return false;
 
-        plot.State = SoilState.Watered;
+        _plots[tile].State = SoilState.Watered;
         return true;
     }
 

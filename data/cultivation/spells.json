@@ -1,0 +1,9 @@
+{
+  "_comment": "生活法术表（M3-4）。四条法术全部来自 §8.2 炼气期的「游戏表现」一列（docs/public/design.md 479-485 行），数值出处是 ARCHITECTURE.md 未定义项备案 #70（法术的灵力消耗）与 #75（灵气浇灌 5 灵力/格、灵雨术与灵锄术各 50 灵力且覆盖以玩家为中心的 3×3）。① unlockStage 记的是**层号**而不是 §8.2 的五档（1-3 / 4-6 / 7-9 / 10-12 / 13）：档是排版，门槛比较要的是「第几层」，而每条法术的档下沿就是它的解锁层——灵气感知 1 层、灵气浇灌 4 层、灵雨术与灵锄术各 10 层。存成区间等于把「4-6 里那个 6」也变成一份没人读的数据。② spiritCost 是**一次施放的价钱**：灵气浇灌 5（备案 #75 的 5 灵力/格，而它只作用于 1 格）、灵雨术与灵锄术各 50、灵气感知 0（§8.2 说 1-3 层「可感知灵气但无法施法」，它本来就不是施法）。③ areaSize 是以目标格为中心的方形边长，必须是奇数（偶数没有中心）：灵气浇灌单格 = 1，灵雨术与灵锄术 3×3 = 3。这两条除了 areaSize 完全一样，正是「一次浇一片」的意思——落成数据而不是代码里的两条分支。④ 目标格按 M1-5 的规矩是**朝向相邻的那一格**（ARCHITECTURE「目标格怎么算」），所以范围法术的中心是玩家面前那一格，不是他脚下那一格；「以玩家为中心」在备案 #75 里的意思是不朝他处放，而不是踩上去。⑤ **轻身术（10）与小回春术（30）刻意不录**（备案 #70 里那四个数中的两个）：轻身术要有持续时间的增益/状态系统、小回春术要有「体力」这个属性，两者在这个游戏里都还不存在——录进来就是两条没有调用方的死数据（铁律 11）。它们各自的系统落地时再补进本表。",
+  "spells": [
+    { "id": "spell_spirit_sense",    "name": "灵气感知", "effect": "Sense", "unlockRealmId": "qi_refining", "unlockStage": 1,  "spiritCost": 0,  "areaSize": 1 },
+    { "id": "spell_spirit_watering", "name": "灵气浇灌", "effect": "Water", "unlockRealmId": "qi_refining", "unlockStage": 4,  "spiritCost": 5,  "areaSize": 1 },
+    { "id": "spell_spirit_rain",     "name": "灵雨术",   "effect": "Water", "unlockRealmId": "qi_refining", "unlockStage": 10, "spiritCost": 50, "areaSize": 3 },
+    { "id": "spell_spirit_hoe",      "name": "灵锄术",   "effect": "Till",  "unlockRealmId": "qi_refining", "unlockStage": 10, "spiritCost": 50, "areaSize": 3 }
+  ]
+}

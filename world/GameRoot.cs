@@ -163,6 +163,9 @@ public partial class GameRoot : Node
         // 上限是层号的一元公式，没有第二张表要与它对条数（层号的上下界由 CultivationSystem 守着）
         var spiritPower = SpiritPowerTable.LoadDefault();
 
+        // M3-4 生活法术：加载时要拿境界表对上「解锁的是第几层」，所以必然排在 realms 之后
+        var spells = SpellTable.LoadDefault(realms);
+
         // 表是只读数据，这几件才是各自要进存档的状态（见下面的 _saveables）
         var wallet = new Wallet();
         var prices = new MarketPrices(items);
@@ -174,6 +177,10 @@ public partial class GameRoot : Node
         var cultivation = new CultivationSystem(
             spiritRoots, realms, cultivationSpeed, spiritPower,
             StartingGradeId, rootId: null, StartingRealmId, StartingStage);
+
+        // 生活法术要读玩家的层数（解锁）与灵力（消耗），还要改耕地，所以排在两者之后。
+        // 它自己不带状态、也不订阅任何事件，所以既不进 _saveables、也没有 Dispose
+        var lifeSpells = new LifeSpellSystem(spells, cultivation, farmland);
 
         // 商店要读时间判营业时间（§5.2），所以排在 TimeService 之后；钱与货都是从构造时注入的
         var shopSystem = new ShopSystem(shops, items, inventory, wallet, time, prices);
@@ -234,6 +241,11 @@ public partial class GameRoot : Node
         // 答不出「打坐一小时回几点」——那要读表才知道）
         services.Register<ISpiritPowerTable>(spiritPower);
         services.Register<ICultivationSystem>(cultivation);
+
+        // M3-4：法术表要答「这条法术几层解锁、花多少、作用几格」，法术系统要答「现在放不放得出」。
+        // 桥接层两个都要（快捷栏列法术读表，按键施放走系统），所以按接口各注册一份
+        services.Register<ISpellTable>(spells);
+        services.Register<ILifeSpellSystem>(lifeSpells);
 
         WorldSeed = worldSeed;
         _time = time;

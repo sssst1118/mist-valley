@@ -112,6 +112,44 @@ public class FarmlandTests
     }
 
     [Fact]
+    public void 能锄吗_与锄一下的返回值永远一致()
+    {
+        // CanTill / CanWater 是给「花灵力之前先问一句」用的（生活法术要在扣灵力之前知道这一片
+        // 有几格真的动得了），所以它们必须与动作同一条判据——两份判据漂了，症状就是
+        // 「灵力扣了、地没动」。这条用例逐种状态各验一遍，漂了立刻红
+        Farmland farmland = NewFarmland();
+
+        Assert.Equal(farmland.CanTill(Tile), farmland.TryTill(Tile));        // 未开垦 → 两边都为真
+        Assert.Equal(farmland.CanTill(Tile), farmland.TryTill(Tile));        // 已开垦 → 两边都为假
+        Assert.Equal(farmland.CanTill(Other), farmland.TryTill(Other));      // 另一格互不影响
+        Assert.Equal(farmland.CanWater(Tile), farmland.TryWater(Tile));      // 已开垦 → 两边都为真
+        Assert.Equal(farmland.CanWater(Tile), farmland.TryWater(Tile));      // 已浇水 → 两边都为假
+        Assert.Equal(farmland.CanWater(Other), farmland.TryWater(Other));    // 已开垦但没浇 → 两边都为真
+        Assert.Equal(farmland.CanTill(Other), farmland.TryTill(Other));      // 已浇水 → 两边都为假
+
+        // 有作物的格也一样：CanX 与 TryX 不许各说各话
+        Assert.Equal(farmland.CanWater(Tile), farmland.TryWater(Tile));
+        Assert.Equal(farmland.CanTill(Tile), farmland.TryTill(Tile));
+    }
+
+    [Fact]
+    public void 能不能_是只读的_问一百遍也不改状态()
+    {
+        // 法术会先问遍一片地再决定扣不扣灵力，所以这两个查询必须一个字节都不改
+        Farmland farmland = NewFarmland();
+
+        for (int i = 0; i < 100; i++)
+        {
+            Assert.True(farmland.CanTill(Tile));
+            Assert.False(farmland.CanWater(Tile));
+        }
+
+        Assert.Equal(SoilState.Untilled, farmland.StateOf(Tile));
+        Assert.Equal(0, farmland.DaysGrown(Tile));
+        Assert.False(farmland.HasCrop(Tile));
+    }
+
+    [Fact]
     public void 播种_未开垦的格种不了()
     {
         Farmland farmland = NewFarmland();
