@@ -27,7 +27,9 @@ public class CultivationSystemTests
         string? rootId = null,
         string realmId = "qi_refining",
         int stage = 1) =>
-        new(Roots, Realms, Speed, SpiritPower, gradeId, rootId, realmId, stage);
+        // 灵脉喂替身（×1.0）：本文件量的是灵根/境界与解锁门槛，与打坐多快无关
+        // （见 NoSpiritVein 的注释）
+        new(Roots, Realms, Speed, SpiritPower, new NoSpiritVein(), gradeId, rootId, realmId, stage);
 
     // ── 读状态 ────────────────────────────────────────────────────────
 
@@ -108,14 +110,21 @@ public class CultivationSystemTests
     [Fact]
     public void 构造_表是null_抛()
     {
+        var vein = new NoSpiritVein();
+
         Assert.Throws<ArgumentNullException>(
-            () => new CultivationSystem(null!, Realms, Speed, SpiritPower, "grade_false", null, "qi_refining", 1));
+            () => new CultivationSystem(null!, Realms, Speed, SpiritPower, vein, "grade_false", null, "qi_refining", 1));
         Assert.Throws<ArgumentNullException>(
-            () => new CultivationSystem(Roots, null!, Speed, SpiritPower, "grade_false", null, "qi_refining", 1));
+            () => new CultivationSystem(Roots, null!, Speed, SpiritPower, vein, "grade_false", null, "qi_refining", 1));
         Assert.Throws<ArgumentNullException>(
-            () => new CultivationSystem(Roots, Realms, null!, SpiritPower, "grade_false", null, "qi_refining", 1));
+            () => new CultivationSystem(Roots, Realms, null!, SpiritPower, vein, "grade_false", null, "qi_refining", 1));
         Assert.Throws<ArgumentNullException>(
-            () => new CultivationSystem(Roots, Realms, Speed, null!, "grade_false", null, "qi_refining", 1));
+            () => new CultivationSystem(Roots, Realms, Speed, null!, vein, "grade_false", null, "qi_refining", 1));
+
+        // 第四个因素也一样：灵气浓度缺席就当场说清，而不是悄悄按 ×1.0 算——
+        // 那会让「打坐忽然慢了」表现为一个没人查得出原因的现象
+        Assert.Throws<ArgumentNullException>(
+            () => new CultivationSystem(Roots, Realms, Speed, SpiritPower, null!, "grade_false", null, "qi_refining", 1));
     }
 
     [Fact]

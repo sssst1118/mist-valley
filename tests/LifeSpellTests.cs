@@ -66,7 +66,10 @@ public class LifeSpellTests
 
     /// <summary>伪灵根（0.3x）、炼气期、指到第几层——层号是这几条用例唯一的自变量。</summary>
     private static CultivationSystem Cultivation(int stage) =>
-        new(Roots, Realms, Speed, SpiritPower, "grade_false", rootId: null, "qi_refining", stage);
+        // 灵脉喂替身（×1.0）：本文件量的是法术的解锁、消耗与落在哪几格，与打坐多快无关
+        // （见 NoSpiritVein 的注释）
+        new(Roots, Realms, Speed, SpiritPower, new NoSpiritVein(),
+            "grade_false", rootId: null, "qi_refining", stage);
 
     private LifeSpellSystem NewSystem(CultivationSystem cultivation) =>
         new(Spells, cultivation, _farmland);

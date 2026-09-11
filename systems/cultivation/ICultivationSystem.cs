@@ -56,9 +56,13 @@ public interface ICultivationSystem
     int MaxSpirit { get; }
 
     /// <summary>
-    /// 此刻打坐有多快（§4.2 灵根 × §8.3 季节 × §8.3 时辰，**相乘**）。
+    /// 此刻打坐有多快（§4.2 灵根 × §8.3 季节 × §8.3 时辰 × §8.8 灵气浓度，**相乘**）。
     /// 给 UI 解释「现在打坐多快」用；要算具体涨多少修为走 <see cref="Meditate"/>。
     /// </summary>
+    /// <remarks>
+    /// 第四项（灵气浓度）来自打坐处——M3-5 起是农场的灵脉等级（微型 1.10 … 龙脉 6.00）。
+    /// 它进的是**乘数**，与 §8.3 表里那一行的百分数是同一组数，不是另造的一套刻度。
+    /// </remarks>
     double SpeedMultiplierAt(GameTime now);
 
     /// <summary>

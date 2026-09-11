@@ -1,0 +1,22 @@
+{
+  "_comment": "灵脉与福地（M3-5）。整张表**逐字照抄 §8.8 灵脉与福地体系**（docs/public/design.md 1005-1031 行），一个数都没有改：veins 六级的数字来自那张表的「灵气浓度」列（+10% ⇒ 1.10，同 SpiritRootGrade 与 cultivation_speed.json 的写法——文档给的是百分数，这里落成乘数，只留一个含义），lands 九阶的名称与说明来自下面那张表的两列。两处要当心：① §8.3 的「其他影响因素」里也列着灵脉等级（811 行），但那一行**只有五级**（到巨型 +200% 为止），龙脉那一档只写在 §8.8 上——所以本表以 §8.8 为准，取六级。② 末尾的「游戏绑定」原文说「福地等级决定农场的灵气浓度」，**而九阶表一个数都没给**（二阶的『灵气浓度提升』、三阶的『可建造修炼室』都是定性描述）。所以此刻的浓度乘数**只由灵脉等级决定**，福地那一侧只存等级、不编数字（编一个出来就是自造设定）；等文档补数，它才会作为第二项乘进 ISpiritVeinSource.DensityMultiplier。注意本表**没有**一个「农场的初始等级」字段：初始状态是 §8.8 的原文『农场初始为「微型灵脉 + 一阶福地」』，那个起点写在 world/GameRoot.cs 的常量上（与 StartingGradeId 同款）——表只管「有哪几级、每级多少」，起点是玩家农场的事。",
+  "veins": [
+    { "id": "vein_micro",  "name": "微型灵脉", "concentrationMultiplier": 1.10, "description": "农场初始状态，灵气稀薄" },
+    { "id": "vein_small",  "name": "小型灵脉", "concentrationMultiplier": 1.25, "description": "10 条微型灵脉合一，可支撑小型宗门" },
+    { "id": "vein_medium", "name": "中型灵脉", "concentrationMultiplier": 1.50, "description": "10 条小型灵脉合一，可支撑中型宗门" },
+    { "id": "vein_large",  "name": "大型灵脉", "concentrationMultiplier": 2.00, "description": "10 条中型灵脉合一，可支撑大型宗门" },
+    { "id": "vein_giant",  "name": "巨型灵脉", "concentrationMultiplier": 3.00, "description": "10 条大型灵脉合一，可支撑顶级宗门" },
+    { "id": "vein_dragon", "name": "龙脉",     "concentrationMultiplier": 6.00, "description": "传说中的灵脉，可化龙升天" }
+  ],
+  "lands": [
+    { "id": "land_1", "order": 1, "name": "福地",     "description": "拥有独立灵气循环，可种植灵植" },
+    { "id": "land_2", "order": 2, "name": "小福地",   "description": "灵气浓度提升，可养殖灵兽" },
+    { "id": "land_3", "order": 3, "name": "中福地",   "description": "可建造修炼室、炼丹房" },
+    { "id": "land_4", "order": 4, "name": "大福地",   "description": "可容纳弟子修炼" },
+    { "id": "land_5", "order": 5, "name": "顶级福地", "description": "可孕育灵脉" },
+    { "id": "land_6", "order": 6, "name": "洞天",     "description": "独立小世界，不受外界季节天气影响" },
+    { "id": "land_7", "order": 7, "name": "小洞天",   "description": "可演化生态，诞生灵物" },
+    { "id": "land_8", "order": 8, "name": "大洞天",   "description": "可容纳宗门，自成一界" },
+    { "id": "land_9", "order": 9, "name": "洞天福地", "description": "传说中的境界，可化大千世界" }
+  ]
+}

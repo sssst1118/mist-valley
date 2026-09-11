@@ -18,8 +18,9 @@ namespace XingGame.Systems.Cultivation;
 public enum SpellEffect
 {
     /// <summary>
-    /// 感知：只有解锁，没有作用——§8.2 的「灵气感知」解锁的是一个界面（看灵田的灵气浓度），
-    /// 而**灵气浓度属于灵脉/福地那一刀**（备案 #72），本切片不去编一个假的浓度出来。
+    /// 感知：只有解锁，没有作用——§8.2 的「灵气感知」解锁的是一个界面（看灵田的灵气浓度）。
+    /// 那个读数走 <see cref="ISpiritSenseSystem"/>（M3-5 起浓度有了来源：§8.8 的灵脉等级），
+    /// 所以它不对着任何格子放、也不在 <see cref="ILifeSpellSystem.TryCastAt"/> 的路上。
     /// </summary>
     Sense,
 

@@ -47,6 +47,7 @@ public sealed class CultivationSystem : ICultivationSystem, ISaveable
     private readonly IRealmTable _realms;
     private readonly ICultivationSpeedTable _speed;
     private readonly ISpiritPowerTable _spiritPower;
+    private readonly ISpiritVeinSource _spiritVein;
 
     private SpiritRootGrade _grade = null!;
     private SpiritRootDefinition? _root;
@@ -58,11 +59,16 @@ public sealed class CultivationSystem : ICultivationSystem, ISaveable
     /// <param name="gradeId">§4.2 的品级 id，必填。</param>
     /// <param name="rootId">§4.3/§4.4 的具体灵根 id；四档普通品级传 null。</param>
     /// <param name="stage">从 1 起的小境界层号。</param>
+    /// <param name="spiritVein">
+    /// 打坐处的灵气浓度（§8.8 的灵脉等级）。**打坐只看这个数**，所以这里收的是窄接口而不是农场的
+    /// 那件状态——见 <see cref="ISpiritVeinSource"/>。
+    /// </param>
     public CultivationSystem(
         ISpiritRootTable roots,
         IRealmTable realms,
         ICultivationSpeedTable speed,
         ISpiritPowerTable spiritPower,
+        ISpiritVeinSource spiritVein,
         string gradeId,
         string? rootId,
         string realmId,
@@ -72,6 +78,7 @@ public sealed class CultivationSystem : ICultivationSystem, ISaveable
         _realms = realms ?? throw new ArgumentNullException(nameof(realms));
         _speed = speed ?? throw new ArgumentNullException(nameof(speed));
         _spiritPower = spiritPower ?? throw new ArgumentNullException(nameof(spiritPower));
+        _spiritVein = spiritVein ?? throw new ArgumentNullException(nameof(spiritVein));
 
         (SpiritRootGrade grade, SpiritRootDefinition? root, RealmDefinition realm) =
             Resolve(gradeId, rootId, realmId, "构造参数");
@@ -138,17 +145,23 @@ public sealed class CultivationSystem : ICultivationSystem, ISaveable
     }
 
     /// <summary>
-    /// 此刻打坐有多快：§4.2 的灵根档位 × §8.3 的季节 × §8.3 的时辰。
+    /// 此刻打坐有多快：§4.2 的灵根档位 × §8.3 的季节 × §8.3 的时辰 × §8.8 的灵脉（灵气浓度）。
     /// </summary>
     /// <remarks>
     /// <para>
-    /// <b>三个因素相乘，不相加</b>：§8.3 把它们列成一张「其他影响因素」表，每一行都是一个独立的
+    /// <b>四个因素相乘，不相加</b>：§8.3 把它们列成一张「其他影响因素」表，每一行都是一个独立的
     /// 加成，同时成立时是几个乘数连乘——春季的 +10% 撞上子时的 +30% 是 ×1.43，不是 ×1.40。
     /// 相加会随因素增多越来越偏离文档，而偏差只在两个加成同时出现时才显形。
     /// </para>
     /// <para>
-    /// <b>加第四个因素就在这一行再乘一项</b>（灵脉等级、聚灵阵、风水、功法品阶、丹药、心境、双修
-    /// 都排在 §8.3 的表里等各自的系统）：合成只此一处，打坐的时间账与升层判定都不用改。
+    /// <b>第四个因素（M3-5 起：灵脉等级）以**乘数**的身份进来</b>：§8.3 那一行写的是
+    /// 「微型灵脉 +10%，小型 +25%…」，§8.8 的表把它落成灵气浓度，两边是同一组数。所以这里乘的是
+    /// <see cref="ISpiritVeinSource.DensityMultiplier"/>，不是又一套刻度——**别自创第二套**
+    /// （比如 0-100 的浓度值），那会让「灵脉 +10%」在代码里有两个含义。
+    /// </para>
+    /// <para>
+    /// <b>再加因素（聚灵阵、风水、功法品阶、丹药、心境、双修）也就在这一行再乘一项</b>：
+    /// 合成只此一处，打坐的时间账与升层判定都不用改。
     /// </para>
     /// </remarks>
     /// <exception cref="ArgumentOutOfRangeException">
@@ -159,7 +172,8 @@ public sealed class CultivationSystem : ICultivationSystem, ISaveable
     public double SpeedMultiplierAt(GameTime now) =>
         _grade.CultivationSpeedMultiplier       // §4.2 六档灵根：0.3x .. 4.0x
         * _speed.SeasonMultiplier(now.Season)   // §8.3 季节：春 1.10 / 夏 1.05 / 秋 1.10 / 冬 0.90
-        * _speed.HourMultiplier(now.Hour);      // §8.3 时辰：子时 1.30 / 午时 1.20 / 其余 1.00
+        * _speed.HourMultiplier(now.Hour)       // §8.3 时辰：子时 1.30 / 午时 1.20 / 其余 1.00
+        * _spiritVein.DensityMultiplier;        // §8.8 灵气浓度：微型 1.10 … 龙脉 6.00
 
     /// <summary>
     /// 打坐 <paramref name="minutes"/> 游戏分钟，按 <paramref name="now"/> 这一刻的倍率结算修为，

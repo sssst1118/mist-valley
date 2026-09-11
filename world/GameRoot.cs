@@ -70,6 +70,16 @@ public partial class GameRoot : Node
     private const int StartingStage = 1;
 
     /// <summary>
+    /// 新档的起点灵脉：微型灵脉。§8.8 的「游戏绑定」原文——「农场初始为『微型灵脉 + 一阶福地』」。
+    /// 与 <see cref="StartingGradeId"/> 同款：**起点写在组合根上，不写进表里**——表答「有哪几级、
+    /// 每级多少」，起点是这位玩家的农场的事（且 §8.8 说它将来能升，所以它是要进存档的状态）。
+    /// </summary>
+    private const string StartingVeinId = "vein_micro";
+
+    /// <summary>同上：一阶福地。</summary>
+    private const string StartingLandId = "land_1";
+
+    /// <summary>
     /// 攒下的零头分钟。每帧增量是小数（10 分/秒 ÷ 60fps ≈ 0.167）而 Advance 只收 int，
     /// 不留余数就只能一直 Advance(0)，时间永远不走。
     /// </summary>
@@ -166,6 +176,10 @@ public partial class GameRoot : Node
         // M3-4 生活法术：加载时要拿境界表对上「解锁的是第几层」，所以必然排在 realms 之后
         var spells = SpellTable.LoadDefault(realms);
 
+        // M3-5 灵脉与福地：农场的灵气浓度（§8.8）。它不欠别的表的顺序——两张表自带校验
+        // （阶号连续、灵脉浓度递增），没有第二张表要与它对条数
+        var spiritLandTable = SpiritLandTable.LoadDefault();
+
         // 表是只读数据，这几件才是各自要进存档的状态（见下面的 _saveables）
         var wallet = new Wallet();
         var prices = new MarketPrices(items);
@@ -174,13 +188,22 @@ public partial class GameRoot : Node
         var ranch = new Ranch(animals);
         var mineProgress = new MineProgress(mines.Get(DefaultMineId));
         var crafting = new CraftingSystem(recipes, inventory, items);
+
+        // 农场的灵脉与福地（M3-5）：构造即 §8.8 的起点「微型灵脉 + 一阶福地」。
+        // 它排在 CultivationSystem 之前——打坐的速度要把灵气浓度当第四项乘进去
+        var spiritLand = new SpiritLandSystem(spiritLandTable, StartingVeinId, StartingLandId);
+
         var cultivation = new CultivationSystem(
-            spiritRoots, realms, cultivationSpeed, spiritPower,
+            spiritRoots, realms, cultivationSpeed, spiritPower, spiritLand,
             StartingGradeId, rootId: null, StartingRealmId, StartingStage);
 
         // 生活法术要读玩家的层数（解锁）与灵力（消耗），还要改耕地，所以排在两者之后。
         // 它自己不带状态、也不订阅任何事件，所以既不进 _saveables、也没有 Dispose
         var lifeSpells = new LifeSpellSystem(spells, cultivation, farmland);
+
+        // 灵气感知（M3-5）：门槛复用生活法术的解锁判定，读数取农场的灵脉与福地。
+        // 它同样不带状态（看得见什么是现算的），既不进 _saveables、也没有 Dispose
+        var spiritSense = new SpiritSenseSystem(spells, lifeSpells, spiritLand);
 
         // 商店要读时间判营业时间（§5.2），所以排在 TimeService 之后；钱与货都是从构造时注入的
         var shopSystem = new ShopSystem(shops, items, inventory, wallet, time, prices);
@@ -247,6 +270,14 @@ public partial class GameRoot : Node
         services.Register<ISpellTable>(spells);
         services.Register<ILifeSpellSystem>(lifeSpells);
 
+        // M3-5：灵脉与福地那张表也注册——「六级灵脉各是多少、九阶福地各意味着什么」只有它答得出
+        // （状态件只答「农场现在在哪一级」）；感知系统要答「现在看得见看不见」。
+        // 打坐要的那个浓度走 ISpiritVeinSource，由组合根**构造时注入**，不从这里取——
+        // 注册表取用的都是「随时可能换」的东西，而浓度在构造那一刻就该定下来
+        services.Register<ISpiritLandTable>(spiritLandTable);
+        services.Register<ISpiritLandSystem>(spiritLand);
+        services.Register<ISpiritSenseSystem>(spiritSense);
+
         WorldSeed = worldSeed;
         _time = time;
         _saves = saves;
@@ -260,7 +291,7 @@ public partial class GameRoot : Node
         {
             time, inventory, farmland,
             wallet, prices, friendship, codex, ranch, mineProgress, crafting,
-            cultivation,
+            cultivation, spiritLand,
         };
         if (saves.Load(SaveSlot, _saveables))
         {

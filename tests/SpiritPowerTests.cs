@@ -33,7 +33,10 @@ public class SpiritPowerTests
         int stage = 1,
         ISpiritPowerTable? spiritPower = null,
         ICultivationSpeedTable? speed = null) =>
-        new(Roots, Realms, speed ?? Speed, spiritPower ?? SpiritPower,
+        // 灵脉那一项喂替身（×1.0）：本文件量的是灵力那笔账（备案 #69/#71），而修为涨得多快
+        // 只影响「几次打坐才升层」——喂真灵脉会让每条用例的时长都跟着农场的等级走
+        // （见 NoSpiritVein 的注释）
+        new(Roots, Realms, speed ?? Speed, spiritPower ?? SpiritPower, new NoSpiritVein(),
             "grade_true_dual", rootId: null, "qi_refining", stage);
 
     // ── 上限：随层数派生 ─────────────────────────────────────────────

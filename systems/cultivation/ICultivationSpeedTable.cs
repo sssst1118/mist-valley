@@ -10,13 +10,15 @@ namespace XingGame.Systems.Cultivation;
 /// <remarks>
 /// <para>
 /// <b>倍率的合成不在这里</b>：本接口只回答「这一项是多少」，连乘在
-/// <see cref="CultivationSystem.SpeedMultiplierAt"/> 那一处——三个因素分别来自灵根与时间，
-/// 摊进表里会把「谁乘谁」藏进两个模块之间。
+/// <see cref="CultivationSystem.SpeedMultiplierAt"/> 那一处——因素分别来自灵根、时间与农场
+/// （第四项是灵脉等级带来的灵气浓度，M3-5 起，但它**不在本表上**：那是农场的状态，
+/// 数据在 <c>data/cultivation/spirit_land.json</c>），摊进表里会把「谁乘谁」藏进两个模块之间、
+/// 还会让同一个事实在两张表上各存一份。
 /// </para>
 /// <para>
-/// <b>§8.3 表里还有七个因素没有对应的表项</b>（灵脉等级 / 聚灵阵 / 风水 / 功法品阶 / 丹药 /
-/// 心境 / 双修）：各自的系统都还不存在，先建字段就是建一批没人读的数，且与真数据长得一模一样。
-/// 它们跟着各自的系统一起落地，见 <c>tests/M3Audit_Cultivation.cs</c> 的反射钉子。
+/// <b>§8.3 表里还有六个因素没有对应的表项</b>（聚灵阵 / 风水 / 功法品阶 / 丹药 / 心境 / 双修）：
+/// 各自的系统都还不存在，先建字段就是建一批没人读的数，且与真数据长得一模一样。它们跟着各自的
+/// 系统一起落地，见 <c>tests/M3Audit_Cultivation.cs</c> 的反射钉子。
 /// </para>
 /// </remarks>
 public interface ICultivationSpeedTable

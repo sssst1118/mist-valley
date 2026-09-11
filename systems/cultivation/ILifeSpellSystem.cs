@@ -27,8 +27,10 @@ public interface ILifeSpellSystem
     /// 这条法术解锁了没有：玩家的境界层数够不够它要求的第几层（现算，不记录）。
     /// </summary>
     /// <remarks>
-    /// 灵气感知的入口就是它：§8.2 说 1-3 层「可感知灵气但无法施法」，解锁的是一个界面，
-    /// 而那个界面要看的东西（灵气浓度）属于灵脉/福地那一刀。本切片它就是一个查询。
+    /// 灵气感知的门槛也在这里：§8.2 说 1-3 层「可感知灵气但无法施法」。**但它的产物不在这里**
+    /// ——那条法术没有落点，它买的是「看得见」、读数是灵田的灵气浓度，走
+    /// <see cref="ISpiritSenseSystem"/>（M3-5 起有了那个数）。本接口对它的作用只有一个：
+    /// 回答「解锁了没有」。
     /// </remarks>
     /// <exception cref="System.Collections.Generic.KeyNotFoundException">
     /// 法术表里没有这个 id（见 <see cref="ISpellTable.Get"/>）——id 写错是编程错误，不当作「没解锁」。

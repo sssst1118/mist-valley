@@ -81,8 +81,9 @@ public sealed class LifeSpellSystem : ILifeSpellSystem
 
         if (spell.Effect == SpellEffect.Sense)
             throw new NotSupportedException(
-                $"「{spell.Name}」不是对着格子放的法术——它只有解锁判定（IsUnlocked）；"
-                + "它要看的灵气浓度属于灵脉/福地那一刀，本切片还没有那个数");
+                $"「{spell.Name}」不是对着格子放的法术——它没有落点；"
+                + $"它要看的东西（灵田的灵气浓度）走 {nameof(ISpiritSenseSystem)}，"
+                + $"「解锁了没有」走 {nameof(IsUnlocked)}");
 
         if (!IsUnlocked(spellId)) return false;
 
